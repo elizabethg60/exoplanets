@@ -1,0 +1,71 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import math
+
+#x-axis: 3 day orbit
+time = np.arange(0,3,.1)
+#test rv values
+rv_initial = 500 * np.sin((2*math.pi*time)/3)
+noise1 = np.random.normal(0, 50, 30)
+rv2 = rv_initial + noise1
+
+#writing to text file
+def write2(filename):
+    f = open(filename, "w")
+    for i in range(0, len(time)):
+        f.write(str(time[i]))
+        f.write("\n")
+
+
+def model(rv_model):    
+    #x-axis: 3 day orbit
+    time = np.arange(0,3,3/len(rv_model))
+    
+    #plotting time vs provided rv data
+    plt.scatter(time, rv_model)
+    plt.xlabel("Time")
+    plt.title("Radial Velocity vs Time")
+    plt.ylabel("Radial Velocity")
+    plt.xlim(0, 3)
+    plt.ylim(-1000,1000)
+    plt.show()
+    
+    #chisquared b/w provided rv data and sin waves with dif amplitudes
+    amp = np.arange(0,1005,5)
+    chi_squared = []
+    for i in range(0,len(amp)):
+        rv_element = amp[i] * np.sin((2*math.pi*time)/3)
+        
+        chi_squared_stat = sum(((rv_element-rv_model)**2)/50**2)
+        chi_squared.append(chi_squared_stat)
+        
+    #plotting semiaplitude and chisquared
+    plt.plot(amp, chi_squared)
+    plt.title("Chisquared vs Semi-amplitude")
+    plt.xlabel("Semi-amplitude")
+    plt.ylabel("Chisquared")
+    plt.ylim(0,1000)
+    
+    #find the semiaplitude with min chisquared
+    min_y = min(chi_squared)
+    min_x = amp[chi_squared.index(min_y)]
+  
+    #find confidence interval
+    CI_array = [min_y+1]*len(amp)
+    plt.plot(amp, CI_array)
+    idx = np.argwhere(np.diff(np.sign(np.array(chi_squared) - np.array(CI_array)))).flatten()
+    plt.show()
+    
+    
+    print("Minimum Amplitude: {}".format(min_x))
+    print("Minimum Chisquared: {}".format(min_y))
+    print("Confidence Interval: {}".format(amp[idx]))
+    
+    
+    print(amp)
+    neighbor1 = amp[chi_squared.index(min_y) - 1]
+    neighbor2 = amp[chi_squared.index(min_y) + 1]
+    print("Neighbor interval: {}-{}".format(neighbor1, neighbor2))
+    chi1 = chi_squared[chi_squared.index(min_y) - 1]
+    chi2 = chi_squared[chi_squared.index(min_y) + 1]
+    print("Chi interval: {}-{}".format(chi1, chi2))
