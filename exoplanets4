@@ -1,0 +1,56 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import math
+
+time = np.arange(0,3,.1)
+model1 = 500 * np.sin((2*math.pi*time)/3)
+model2 = 500 * np.sin((2*math.pi*time)//.5)
+plt.scatter(time,model1)
+plt.plot(time,model2)
+plt.show()
+
+def model(model1, model2):    
+    #x-axis: 3 day orbit
+    time = np.arange(0,3,3/len(model1))
+    
+    #plotting time vs provided rv data for each model
+    plt.scatter(time, model1, label = "Model 1")
+    plt.scatter(time, model2, label = "Model 2")
+    plt.xlabel("Time")
+    plt.title("Radial Velocity vs Time")
+    plt.ylabel("Radial Velocity")
+    plt.xlim(0, 3)
+    plt.ylim(-1000,1000)
+    plt.legend()
+    plt.show()
+    
+    #plotting time vs provided rv data for sum of models
+    model_sum = model1 + model2
+    plt.plot(time, model_sum)
+    plt.xlabel("Time")
+    plt.title("Radial Velocity vs Time (Sum)")
+    plt.ylabel("Radial Velocity")
+    plt.xlim(0, 3)
+    plt.ylim(-1000,1000)
+    plt.show()
+    
+    #chisquared b/w provided rv data and sin waves with dif periods for each model
+    period = np.arange(0,10,.1)
+    chi_squared1 = []
+    for i in range(0,len(period)):
+        rv_element = 500 * np.sin((period[i]*2*math.pi*time)/3)
+        chi_squared_stat1 = sum(((rv_element-model1)**2)/50**2)
+        chi_squared1.append(chi_squared_stat1)
+        
+    chi_squared2 = []
+    for i in range(0,len(period)):
+        rv_element = 500 * np.sin((period[i]*2*math.pi*time)/3)
+        chi_squared_stat2 = sum(((rv_element-model2)**2)/50**2)
+        chi_squared2.append(chi_squared_stat2)
+    
+    chi_squared = []
+    for i in chi_squared1:
+        chi_squared.append(i)
+        for j in chi_squared2:
+            chi_squared.append(j)
+    print(chi_squared)
