@@ -1,0 +1,61 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import math
+
+#x-axis: 3 day orbit
+time = np.arange(0,3,.1)
+
+#y-axis: sin function with amplitude of 500
+rv_inital = 500 * np.sin((2*math.pi*time)/3)
+
+#plot with no noise
+plt.scatter(time, rv_inital)
+plt.title("No Noise")
+plt.xlabel("Time")
+plt.ylabel("Radial Velocity")
+plt.xlim(0, 3)
+plt.ylim(-600,600)
+plt.show()
+
+#addition of noise - believable
+noise1 = np.random.normal(0, 50, 30)
+rv2 = rv_inital + noise1
+#plot
+plt.scatter(time, rv2)
+plt.title("Believable Noise")
+plt.xlabel("Time")
+plt.ylabel("Radial Velocity")
+plt.xlim(0, 3)
+plt.ylim(-600,600)
+plt.show() 
+
+#addition of noise - unbelievable
+r_s = 6.9*10**10
+r_e = 6.3*10**8
+r_p = 10*r_e
+noise = np.random.normal(0, 200, 30)
+rv1 = rv_inital + noise
+#plot
+plt.scatter(time, rv1)
+plt.title("Unbelievable Noise")
+plt.xlabel("Time")
+plt.ylabel("Radial Velocity")
+plt.xlim(0, 3)
+plt.ylim(-600,600)
+plt.show()
+
+#unbelievable noise with extended time
+time_extended = np.arange(0,9,0.1)
+
+rv_extended = 500 * np.sin(time_extended)
+
+noise_extended = np.random.normal(0, 200, 90)
+rv_extended = rv_extended + noise_extended
+
+plt.scatter(time_extended, rv_extended)
+plt.title("Unbelievable Noise - Extended Time")
+plt.xlabel("Time")
+plt.ylabel("Radial Velocity")
+plt.xlim(0, 9)
+plt.ylim(-600,600)
+plt.show()
