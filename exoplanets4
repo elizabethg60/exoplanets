@@ -2,55 +2,129 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 
-time = np.arange(0,3,.1)
-model1 = 500 * np.sin((2*math.pi*time)/3)
-model2 = 500 * np.sin((2*math.pi*time)//.5)
-plt.scatter(time,model1)
-plt.plot(time,model2)
-plt.show()
 
-def model(model1, model2):    
+def read(filename):
+    import numpy as np
+    f = open(filename, 'r')
+    f.readline()
+    rv = np.loadtxt(f)[:, 1]
+    return rv
+
+def model_1(filename):
+    #extracting rv values
+    model1 = read(filename)
+    print(model1)
+
     #x-axis: 3 day orbit
     time = np.arange(0,3,3/len(model1))
     
     #plotting time vs provided rv data for each model
-    plt.scatter(time, model1, label = "Model 1")
-    plt.scatter(time, model2, label = "Model 2")
+    plt.scatter(time, model1)
     plt.xlabel("Time")
     plt.title("Radial Velocity vs Time")
     plt.ylabel("Radial Velocity")
     plt.xlim(0, 3)
     plt.ylim(-1000,1000)
-    plt.legend()
     plt.show()
-    
-    #plotting time vs provided rv data for sum of models
-    model_sum = model1 + model2
-    plt.plot(time, model_sum)
-    plt.xlabel("Time")
-    plt.title("Radial Velocity vs Time (Sum)")
-    plt.ylabel("Radial Velocity")
-    plt.xlim(0, 3)
-    plt.ylim(-1000,1000)
-    plt.show()
-    
+
     #chisquared b/w provided rv data and sin waves with dif periods for each model
-    period = np.arange(0,10,.1)
+    period = np.arange(0,10,1/3)
     chi_squared1 = []
     for i in range(0,len(period)):
-        rv_element = 500 * np.sin((period[i]*2*math.pi*time)/3)
-        chi_squared_stat1 = sum(((rv_element-model1)**2)/50**2)
-        chi_squared1.append(chi_squared_stat1)
-        
-    chi_squared2 = []
+        rv_element1 = 500 * np.sin((period[i]*2*math.pi*time)/3)
+        chi_squared_stat1 = sum(((rv_element1-model1)**2)/50**2)
+        chi_squared1.append(chi_squared_stat1)    
+ 
+    #plotting semiaplitude and chisquared
+    plt.plot(period, chi_squared1)
+    plt.title("Chisquared vs Period")
+    plt.xlabel("Period")
+    plt.ylabel("Chisquared")
+    
+    #find the semiaplitude with min chisquared
+    min_y = min(chi_squared1)
+    min_x = period[chi_squared1.index(min_y)]
+  
+    #find confidence interval
+    CI_array = [min_y+1]*len(period)
+    plt.plot(period, CI_array)
+    idx = np.argwhere(np.diff(np.sign(np.array(chi_squared1) - np.array(CI_array)))).flatten()
+    plt.show()
+    
+    
+    print("Minimum Period: {}".format(min_x))
+    print("Minimum Chisquared: {}".format(min_y))
+    print("Confidence Interval: {}".format(period[idx]))   
+
+    
+def model_2(filename):    
+    #extracting rv values
+    model_sum = read(filename)
+    print(model_sum)
+
+    #x-axis: 3 day orbit
+    time = np.arange(0,3,3/len(model_sum))
+    
+    #plotting time vs provided rv data for each model
+    plt.plot(time, model_sum)
+    plt.xlabel("Time")
+    plt.title("Radial Velocity (2 Planets) vs Time")
+    plt.ylabel("Radial Velocity")
+    plt.show()
+
+    #chisquared b/w provided rv data and sin waves with dif periods for each model    
+    period = np.arange(0,10,1/3)
+    chi_squared1 = [] #overall sine
+    chi_squared2 = [] #smaller sine
+    #loops overall sine wave
     for i in range(0,len(period)):
-        rv_element = 500 * np.sin((period[i]*2*math.pi*time)/3)
-        chi_squared_stat2 = sum(((rv_element-model2)**2)/50**2)
+        rv_element1 = 500 * np.sin((period[i]*2*math.pi*time)/3)
+        chi_squared_stat1 = sum(((rv_element1-model_sum)**2)/50**2)
+        chi_squared1.append(chi_squared_stat1)
+        #loops through more frequent sine wave
+    for i in range(0,len(period)):
+        rv_element2 = 500 * np.sin((period[i]*2*math.pi*time))
+        chi_squared_stat2 = sum(((rv_element2-model_sum)**2)/50**2)
         chi_squared2.append(chi_squared_stat2)
     
-    chi_squared = []
-    for i in chi_squared1:
-        chi_squared.append(i)
-        for j in chi_squared2:
-            chi_squared.append(j)
-    print(chi_squared)
+    #plotting period and chisquared
+    plt.plot(period, chi_squared1)
+    plt.title("Chisquared vs Period (overall)")
+    plt.xlabel("Period")
+    plt.ylabel("Chisquared")
+ 
+    #find the period with min chisquared
+    min_y1 = min(chi_squared1)
+    min_x1 = period[chi_squared1.index(min_y1)]
+  
+    #find confidence interval
+    CI_array = [min_y1+1]*len(period)
+    plt.plot(period, CI_array)
+    idx1 = np.argwhere(np.diff(np.sign(np.array(chi_squared1) - np.array(CI_array)))).flatten()
+    plt.show()
+    
+    
+    print("Minimum Period: {}".format(min_x1))
+    print("Minimum Chisquared: {}".format(min_y1))
+    print("Confidence Interval: {}".format(period[idx1]))
+
+    #plotting period and chisquared
+    plt.plot(period, chi_squared2)
+    plt.title("Chisquared vs Period (small)")
+    plt.xlabel("Period")
+    plt.ylabel("Chisquared")
+ 
+    #find the period with min chisquared
+    min_y2 = min(chi_squared2)
+    min_x2 = period[chi_squared2.index(min_y2)]
+  
+    #find confidence interval
+    CI_array2 = [min_y2+1]*len(period)
+    plt.plot(period, CI_array2)
+    idx2 = np.argwhere(np.diff(np.sign(np.array(chi_squared2) - np.array(CI_array2)))).flatten()
+    plt.show()
+    
+    
+    print("Minimum Period: {}".format(min_x2))
+    print("Minimum Chisquared: {}".format(min_y2))
+    print("Confidence Interval: {}".format(period[idx2])) 
