@@ -111,9 +111,11 @@ def model_2(filename):
     plt.show()
     
     #find confidence interval
-    #CI_array = [min_y+1]*len(period)
-    #idx1 = np.argwhere(np.diff(np.sign(np.array(chi_squared) - np.array(CI_array)))).flatten()    
+    CI_array = [min_chi+2.3]*len(period)
+    idx = np.argwhere(np.diff(np.sign(np.array(chi_squared) - np.array(CI_array)))).flatten()    
+    CI = set(period[idx])
     
     print("Minimum Period: {}".format(min_periods))
     print("Minimum Chisquared: {}".format(min_chi))
-    #print("Confidence Interval: {}".format(period[idx1]))
+    print("Confidence Interval: {}".format(sorted(CI)))
+
