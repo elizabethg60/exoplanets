@@ -101,21 +101,63 @@ def model_2(filename):
     ax = plt.axes(projection="3d")
     x = y = period
     X,Y = np.meshgrid(x,y)
-    Z = chi_squared
+    Z = np.log10(chi_squared)
     ax.plot_surface(X, Y, Z)
-    ax.set_zlim(0,1000)
+    ax.set_zlim(0.1,5)
     plt.xlabel("Period")
     plt.title("Two Planets' Period vs Chi-Squared")
-    plt.ylabel("Period")
+    plt.ylabel("Period - x")
     ax.set_zlabel("Chi_Squared")
     plt.show()
     
-    #find confidence interval
-    CI_array = [min_chi+2.3]*len(period)
-    idx = np.argwhere(np.diff(np.sign(np.array(chi_squared) - np.array(CI_array)))).flatten()    
-    CI = set(period[idx])
+    locate = np.where(chi_squared == min_chi)
+    first_locate = locate[0]
     
+    #slicing 3d data
+    plt.plot(period, chi_squared[first_locate[0]])
+    plt.title("Slice 1")
+    
+    #finding confidence intervals
+    min1_array = [min(chi_squared[first_locate[0]])+2.3]*len(period)
+    plt.plot(period, min1_array)
+    idx1 = np.argwhere(np.diff(np.sign(np.array(chi_squared[first_locate[0]]) - np.array(min1_array)))).flatten()
+    plt.show()
+    
+    #slicing 3d data
+    plt.plot(period, chi_squared[first_locate[1]])
+    plt.title("Slice 2")
+    
+    #finding confidence intervals
+    min2_array = [min(chi_squared[first_locate[1]])+2.3]*len(period)
+    plt.plot(period, min2_array)
+    idx2 = np.argwhere(np.diff(np.sign(np.array(chi_squared[first_locate[1]]) - np.array(min2_array)))).flatten()
+    plt.show()
+
     print("Minimum Period: {}".format(min_periods))
     print("Minimum Chisquared: {}".format(min_chi))
-    print("Confidence Interval: {}".format(sorted(CI)))
+    print("Confidence Interval One: {}".format(period[idx1]))
+    print("Confidence Interval Two: {}".format(period[idx2]))
+    
+    #actual data
+    plt.scatter(time, model_sum) 
+    time_model = np.arange(0,3,.001)
+    #best model - minimum periods
+    best_model = 500 * np.sin((time_model*2*math.pi)/min_periods[0]) + 500 * np.sin((time_model*2*math.pi)/min_periods[1])
+    plt.plot(time_model, best_model, label = "Min Periods")
+    #best model - first one of two lower
+#    best_model1 = 500 * np.sin((time_model*2*math.pi)/(period[idx1])[0]) + 500 * np.sin((time_model*2*math.pi)/((period[idx2])[1]))
+#    plt.plot(time_model, best_model1, label = "Periods: 1.4 & 0.4")
+    #best model - second of of two lower
+#    best_model2 = 500 * np.sin((time_model*2*math.pi)/(period[idx2])[0]) + 500 * np.sin((time_model*2*math.pi)/((period[idx1])[1]))
+#    plt.plot(time_model, best_model2, label = "Periods: 1.5 & 0.3")
+    #best model - both lower bounds
+    best_model3 = 500 * np.sin((time_model*2*math.pi)/(period[idx1])[0]) + 500 * np.sin((time_model*2*math.pi)/((period[idx2])[0]))
+    plt.plot(time_model, best_model3, label = "Periods: 1.4 & 0.3")
+    #best model - both upper bounds
+    best_model4 = 500 * np.sin((time_model*2*math.pi)/(period[idx1])[1]) + 500 * np.sin((time_model*2*math.pi)/((period[idx2])[1]))
+    plt.plot(time_model, best_model4, label = "Periods: 1.5 & 0.4")
+    
+    plt.title("Model of Best Fit")
+    plt.legend()
+    plt.show()
 
