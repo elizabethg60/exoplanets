@@ -1,0 +1,51 @@
+#first half
+def read_half(filename):
+    f = open(filename, 'r')
+    f.readline()
+    rv = np.loadtxt(f)[:, 1]
+    return rv[0:len(rv)//2]
+#every other - even
+def read_everyother_e(filename):
+    f = open(filename, 'r')
+    f.readline()
+    rv = np.loadtxt(f)[:, 1]
+    everyother = []
+    for i in range(0, len(rv)):
+        if i % 2 == 0:
+            everyother.append(rv[i])
+    return everyother
+#every other four
+def read_every4(filename):
+    f = open(filename, 'r')
+    f.readline()
+    rv = np.loadtxt(f)[:, 1]
+    everyother = []
+    for i in range(0, len(rv), 4):
+        everyother.append(rv[i])
+    return everyother
+'''
+#second half
+def read_half2(filename):
+    f = open(filename, 'r')
+    f.readline()
+    rv = np.loadtxt(f)[:, 1]
+    return rv[len(rv)//2: len(rv)]
+#every other - odd
+def read_everyother_o(filename):
+    f = open(filename, 'r')
+    f.readline()
+    rv = np.loadtxt(f)[:, 1]
+    everyother = []
+    for i in range(0, len(rv)):
+        if i % 2 != 0:
+            everyother.append(rv[i])
+    return everyother
+#every other three
+def read_every3(filename):
+    f = open(filename, 'r')
+    f.readline()
+    rv = np.loadtxt(f)[:, 1]
+    everyother = []
+    for i in range(0, len(rv), 3):
+        everyother.append(rv[i])
+    return everyother
