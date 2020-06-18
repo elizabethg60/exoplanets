@@ -82,7 +82,7 @@ def model_2(filename):
     plt.show()
 
     #chisquared b/w provided rv data and sin waves with dif periods for each model    
-    period = np.arange(0.1,3,.1)
+    period = np.arange(0.1,3,.01)
     chi_squared = np.zeros((len(period),len(period)))
     for i in range(0,len(period)):
         model_one = 500 * np.sin((time*2*math.pi)/period[i])
@@ -139,25 +139,54 @@ def model_2(filename):
     print("Confidence Interval Two: {}".format(period[idx2]))
     
     #actual data
-    plt.scatter(time, model_sum) 
+    fig, (axs1, axs2) = plt.subplots(2)
+    fig.suptitle('Model of Best Fit')
+    axs1.scatter(time, model_sum) 
     time_model = np.arange(0,3,.001)
     #best model - minimum periods
     best_model = 500 * np.sin((time_model*2*math.pi)/min_periods[0]) + 500 * np.sin((time_model*2*math.pi)/min_periods[1])
-    plt.plot(time_model, best_model, label = "Min Periods")
+    axs1.plot(time_model, best_model, label = "Min Periods")
     #best model - first one of two lower
-#    best_model1 = 500 * np.sin((time_model*2*math.pi)/(period[idx1])[0]) + 500 * np.sin((time_model*2*math.pi)/((period[idx2])[1]))
-#    plt.plot(time_model, best_model1, label = "Periods: 1.4 & 0.4")
+    best_model1 = 500 * np.sin((time_model*2*math.pi)/(period[idx1])[0]) + 500 * np.sin((time_model*2*math.pi)/((period[idx2])[1]))
+    axs1.plot(time_model, best_model1, label = "Periods: 1.49 & 0.4")
     #best model - second of of two lower
-#    best_model2 = 500 * np.sin((time_model*2*math.pi)/(period[idx2])[0]) + 500 * np.sin((time_model*2*math.pi)/((period[idx1])[1]))
-#    plt.plot(time_model, best_model2, label = "Periods: 1.5 & 0.3")
+    best_model2 = 500 * np.sin((time_model*2*math.pi)/(period[idx2])[0]) + 500 * np.sin((time_model*2*math.pi)/((period[idx1])[1]))
+    axs1.plot(time_model, best_model2, label = "Periods: 1.51 & 0.39")
     #best model - both lower bounds
     best_model3 = 500 * np.sin((time_model*2*math.pi)/(period[idx1])[0]) + 500 * np.sin((time_model*2*math.pi)/((period[idx2])[0]))
-    plt.plot(time_model, best_model3, label = "Periods: 1.4 & 0.3")
+    axs1.plot(time_model, best_model3, label = "Periods: 1.49 & 0.39")
     #best model - both upper bounds
     best_model4 = 500 * np.sin((time_model*2*math.pi)/(period[idx1])[1]) + 500 * np.sin((time_model*2*math.pi)/((period[idx2])[1]))
-    plt.plot(time_model, best_model4, label = "Periods: 1.5 & 0.4")
-    
-    plt.title("Model of Best Fit")
-    plt.legend()
-    plt.show()
+    axs1.plot(time_model, best_model4, label = "Periods: 1.51 & 0.4")
+    axs1.legend()
+    axs1.set(ylabel = "Radial Velocity")
+    plt.ylim(-1000,1000)
 
+    
+    #residual plot
+    res = model_sum - (500 * np.sin((time*2*math.pi)/min_periods[0]) + 500 * np.sin((time*2*math.pi)/min_periods[1]))
+    avg_res = sum(res)/len(res)
+    axs2.scatter(time, res)
+    axs2.plot(time, [avg_res]*len(time))
+    plt.ylabel("Residuals")
+    plt.ylim(min(res)-10,max(res)+50)
+    
+    plt.xlabel("Time")
+    plt.show()
+    print("Average Residual: {}".format(avg_res))
+    
+    #subplot for each period
+    short_period = model_sum - (500 * np.sin((time*2*math.pi)/min_periods[1]))
+    long_period = model_sum - (500 * np.sin((time*2*math.pi)/min_periods[0]))
+    fig, axs = plt.subplots(2, sharex=True, sharey=True)
+    fig.suptitle('Individual Sine Waves')
+    axs[0].scatter(time, short_period)
+    axs[0].plot(time_model, (500 * np.sin((time_model*2*math.pi)/(period[idx2])[0])))
+    axs[0].plot(time_model, (500 * np.sin((time_model*2*math.pi)/min_periods[0])))
+    axs[1].scatter(time, long_period)
+    axs[1].plot(time_model, (500 * np.sin((time_model*2*math.pi)/min_periods[1])))
+    axs[1].plot(time_model, (500 * np.sin((time_model*2*math.pi)/(period[idx1])[0])))
+    axs[0].set(ylabel = "Radial Velocity")
+    plt.ylabel("Radial Velocity")
+    plt.xlabel("Time")
+    plt.show()
