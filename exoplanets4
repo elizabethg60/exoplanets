@@ -3,12 +3,24 @@ import matplotlib.pyplot as plt
 import math
 from mpl_toolkits import mplot3d
 
-
-def read(filename):
-    import numpy as np
+def read_rv(filename):
     f = open(filename, 'r')
     f.readline()
     rv = np.loadtxt(f)[:, 1]
+    return rv
+
+def read_time(filename):
+    f = open(filename, 'r')
+    f.readline()
+    time = np.loadtxt(f)[:, 0]
+    return time
+
+def frame(filename):
+    f = open(filename, 'r')
+    f.readline()
+    rv = []
+    for line in f.readlines():
+        rv.append(line.split(' ')[1])
     return rv
 
 def model_1(filename):
@@ -68,11 +80,11 @@ def model_1(filename):
 
     
 def model_2(filename):    
-    #extracting rv values
-    model_sum = read(filename)
-
-    #x-axis: 3 day orbit
-    time = np.arange(0,3,3/len(model_sum))
+    #extracting data
+    model_sum = read_rv(filename)
+    time = read_time(filename)
+    amp = 500
+    noise = 50 
     
     #plotting time vs provided rv data for each model
     plt.plot(time, model_sum)
@@ -85,13 +97,13 @@ def model_2(filename):
     period = np.arange(0.1,3,.01)
     chi_squared = np.zeros((len(period),len(period)))
     for i in range(0,len(period)):
-        model_one = 500 * np.sin((time*2*math.pi)/period[i])
+        model_one = amp * np.sin((time*2*math.pi)/period[i])
         for j in range(0,len(period)):
-            model_two = 500 * np.sin((time*2*math.pi)/period[j])
+            model_two = amp * np.sin((time*2*math.pi)/period[j])
             model = model_one + model_two
-            chi_squared_stat = sum(((model-model_sum)**2)/50**2)
+            chi_squared_stat = sum(((model-model_sum)**2)/noise**2)
             chi_squared[i,j] = chi_squared_stat
-    
+   
     #find the period with min chisquared
     min_chi = np.min(chi_squared)    
     x = np.argwhere(chi_squared == min_chi)
@@ -144,19 +156,19 @@ def model_2(filename):
     axs1.scatter(time, model_sum) 
     time_model = np.arange(0,3,.001)
     #best model - minimum periods
-    best_model = 500 * np.sin((time_model*2*math.pi)/min_periods[0]) + 500 * np.sin((time_model*2*math.pi)/min_periods[1])
+    best_model = amp * np.sin((time_model*2*math.pi)/min_periods[0]) + amp * np.sin((time_model*2*math.pi)/min_periods[1])
     axs1.plot(time_model, best_model, label = "Min Periods")
     #best model - first one of two lower
-    best_model1 = 500 * np.sin((time_model*2*math.pi)/(period[idx1])[0]) + 500 * np.sin((time_model*2*math.pi)/((period[idx2])[1]))
+    best_model1 = amp * np.sin((time_model*2*math.pi)/(period[idx1])[0]) + amp * np.sin((time_model*2*math.pi)/((period[idx2])[1]))
     axs1.plot(time_model, best_model1, label = "Periods: 1.49 & 0.4")
     #best model - second of of two lower
-    best_model2 = 500 * np.sin((time_model*2*math.pi)/(period[idx2])[0]) + 500 * np.sin((time_model*2*math.pi)/((period[idx1])[1]))
+    best_model2 = amp * np.sin((time_model*2*math.pi)/(period[idx2])[0]) + amp * np.sin((time_model*2*math.pi)/((period[idx1])[1]))
     axs1.plot(time_model, best_model2, label = "Periods: 1.51 & 0.39")
     #best model - both lower bounds
-    best_model3 = 500 * np.sin((time_model*2*math.pi)/(period[idx1])[0]) + 500 * np.sin((time_model*2*math.pi)/((period[idx2])[0]))
+    best_model3 = amp * np.sin((time_model*2*math.pi)/(period[idx1])[0]) + amp * np.sin((time_model*2*math.pi)/((period[idx2])[0]))
     axs1.plot(time_model, best_model3, label = "Periods: 1.49 & 0.39")
     #best model - both upper bounds
-    best_model4 = 500 * np.sin((time_model*2*math.pi)/(period[idx1])[1]) + 500 * np.sin((time_model*2*math.pi)/((period[idx2])[1]))
+    best_model4 = amp * np.sin((time_model*2*math.pi)/(period[idx1])[1]) + amp * np.sin((time_model*2*math.pi)/((period[idx2])[1]))
     axs1.plot(time_model, best_model4, label = "Periods: 1.51 & 0.4")
     axs1.legend()
     axs1.set(ylabel = "Radial Velocity")
@@ -164,7 +176,7 @@ def model_2(filename):
 
     
     #residual plot
-    res = model_sum - (500 * np.sin((time*2*math.pi)/min_periods[0]) + 500 * np.sin((time*2*math.pi)/min_periods[1]))
+    res = model_sum - (amp * np.sin((time*2*math.pi)/min_periods[0]) + amp * np.sin((time*2*math.pi)/min_periods[1]))
     avg_res = sum(res)/len(res)
     axs2.scatter(time, res)
     axs2.plot(time, [avg_res]*len(time))
@@ -176,16 +188,16 @@ def model_2(filename):
     print("Average Residual: {}".format(avg_res))
     
     #subplot for each period
-    short_period = model_sum - (500 * np.sin((time*2*math.pi)/min_periods[1]))
-    long_period = model_sum - (500 * np.sin((time*2*math.pi)/min_periods[0]))
+    short_period = model_sum - (amp * np.sin((time*2*math.pi)/min_periods[1]))
+    long_period = model_sum - (amp * np.sin((time*2*math.pi)/min_periods[0]))
     fig, axs = plt.subplots(2, sharex=True, sharey=True)
     fig.suptitle('Individual Sine Waves')
     axs[0].scatter(time, short_period)
-    axs[0].plot(time_model, (500 * np.sin((time_model*2*math.pi)/(period[idx2])[0])))
-    axs[0].plot(time_model, (500 * np.sin((time_model*2*math.pi)/min_periods[0])))
+    axs[0].plot(time_model, (amp * np.sin((time_model*2*math.pi)/(period[idx2])[0])))
+    axs[0].plot(time_model, (amp * np.sin((time_model*2*math.pi)/min_periods[0])))
     axs[1].scatter(time, long_period)
-    axs[1].plot(time_model, (500 * np.sin((time_model*2*math.pi)/min_periods[1])))
-    axs[1].plot(time_model, (500 * np.sin((time_model*2*math.pi)/(period[idx1])[0])))
+    axs[1].plot(time_model, (amp * np.sin((time_model*2*math.pi)/min_periods[1])))
+    axs[1].plot(time_model, (amp * np.sin((time_model*2*math.pi)/(period[idx1])[0])))
     axs[0].set(ylabel = "Radial Velocity")
     plt.ylabel("Radial Velocity")
     plt.xlabel("Time")
