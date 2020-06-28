@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 from mpl_toolkits import mplot3d
+from decimal import Decimal
 
 def read_rv(filename):
     f = open(filename, 'r')
@@ -176,34 +177,25 @@ star_mass = 1.989 * 10**30
 p1_sec = min_periods[0]*86400
 p2_sec = min_periods[1]*86400
 k = 50000
-J = 1.898 * 10**27
 
-a1 = []
-for M in np.arange(20, 50, 0.01):
-    x = ((p1_sec**2*G*(star_mass + M*J))/(4*(np.pi)**2))**(1/3)
-    a1.append(x)
+k_values = []
+planet_mass = range(10**28,10**29,10**24)
+for M in planet_mass:
+    x = G**(1/2)*(star_mass + M)**(-1/2)*(((p1_sec**2*G*(star_mass + M))/(4*(np.pi)**2))**(1/3))**(-1/2)*M
+    k_values.append(x)
+diff = [i - k for i in planet_mass]
+ind = diff.index(min(i for i in diff if i > 0))
+axs = ((p1_sec**2*G*(star_mass + planet_mass[ind]))/(4*(np.pi)**2))**(1/3)
+print("{} Planet Mass: {} kg, Semi-Major Axis: {} cm".format(min_periods[0], '%.2E' % Decimal(planet_mass[ind]), axs))
 
-a2 = []
-for M in np.arange(20, 50, 0.01):
-    x = ((G**(1/2)*M*J)/((star_mass + M*J)**(1/2)*k))**2
-    a2.append(x)
-   
-diff = []
-zip_object = zip(a1,a2)
-for a1_i, a2_i in zip_object:
-    diff.append(a2_i - a1_i)
-print(diff)
-#ind = diff.index(min(diff))
-#print(a1[ind]*J,a1[ind]*J)
-
-'''   
-f = open("test.txt", "w")
-for i in range(0, len(diff)):
-    f.write(str(diff[i]))
-    f.write("\n")
-'''
+k_values2 = []
+for M in planet_mass:
+    x2 = G**(1/2)*(star_mass + M)**(-1/2)*(((500**2*G*(star_mass + M))/(4*(np.pi)**2))**(1/3))**(-1/2)*M
+    k_values2.append(x2)
+diff2 = [i - k for i in planet_mass]
+ind2 = diff2.index(min(i for i in diff2 if i > 0))
+axs2 = ((p2_sec**2*G*(star_mass + planet_mass[ind2]))/(4*(np.pi)**2))**(1/3)
+print("{} Planet Mass: {} kg, Semi-Major Axis: {} cm".format(min_periods[1], '%.2E' % Decimal(planet_mass[ind2]), axs2))
 
 
-#fft 3 days sampled higher??
-#period in seconds(currently in days ), amp in cm (currently in m)
-#mass around jupiter 
+#expected 1.5 planet to have larger mass since it is further away but still has a larger period
