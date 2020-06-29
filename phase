@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 from mpl_toolkits import mplot3d
+from decimal import Decimal
 
 def read_rv(filename):
     f = open(filename, 'r')
@@ -32,8 +33,11 @@ plt.title("Radial Velocity (2 Planets) vs Time")
 plt.ylabel("Radial Velocity")
 plt.show()
 
-#chisquared b/w provided rv data and sin waves with dif periods for each model    
+#chisquared b/w provided rv data and sin waves with dif periods for each model
+#test =  np.arange(0.1,3,.01)  
+#print(np.where(test == 0.4)) 
 period = np.arange(0.1,3,.01)
+'''index problem where 0.4 shouldn't start at one but index of 0.4 for test'''
 chi_squared = np.zeros((len(period),len(period)))
 for i in range(0,len(period)):
     model_one = amp * np.sin((time*2*math.pi)/period[i])
@@ -42,12 +46,12 @@ for i in range(0,len(period)):
         model = model_one + model_two
         chi_squared_stat = sum(((model-model_sum)**2)/noise**2)
         chi_squared[i,j] = chi_squared_stat
-   
+ 
 #find the period with min chisquared
 min_chi = np.min(chi_squared)    
 x = np.argwhere(chi_squared == min_chi)
 min_periods = period[x[0]]
-
+'''
 #plotting periods vs chisquared
 ax = plt.axes(projection="3d")
 x = y = period
@@ -144,22 +148,76 @@ plt.xlabel("Time")
 plt.show()
 
 #plotting individual sine waves vs phase
-div = int(round(3 / min_periods[1]))
+div = int(round((max(time) - min(time)) / min_periods[1]))
 n = len(time)//div
 x = list(groups(long_period,n))
 plt.scatter(time[0:n], x[0])
 plt.scatter(time[0:n], x[1])
+time_model1 = np.arange(0, min_periods[1], 0.001)
+plt.plot(time_model1, amp * np.sin((time_model1*2*math.pi)/min_periods[1]))
 plt.xlabel("Phase")
 plt.title("Longer Period Phase")
 plt.ylabel("Radial Velocity")
 plt.show()
 
-div = int(round(3 / min_periods[0]))
+div = int(round((max(time)- min(time)) / min_periods[0]))
 n = len(time)//div
 x = list(groups(short_period,n))
-for i in range(0,10):
+for i in range(0,7):
     plt.scatter(time[0:n], x[i])
+time_model2 = np.arange(0, min_periods[0], 0.001)
+plt.plot(time_model2, amp * np.sin((time_model2*2*math.pi)/min_periods[0]))
 plt.xlabel("Phase")
 plt.title("Shorter Period Phase")
 plt.ylabel("Radial Velocity")
 plt.show()
+'''
+G = 6.6743 * 10**-11
+star_mass = 1.989 * 10**30
+p1_sec = min_periods[0]*86400
+p2_sec = min_periods[1]*86400
+k = 500
+m_j = 1.9*10**27
+star_r_m = 7*10**8 #meters
+au = 1.5*10**11 #AU
+
+#planet 1 = 0.4 period
+#planet 2 = 1.5 period
+
+k_values = []
+planet_mass = np.arange(0.1,100,0.1)*m_j
+for M in planet_mass:
+    x = G**(1/2)*(star_mass + M)**(-1/2)*(((p1_sec**2*G*(star_mass))/(4*(np.pi)**2))**(1/3))**(-1/2)*M
+    k_values.append(x)
+diff = [i - k for i in k_values]
+ind = diff.index(min(i for i in diff if i > 0))
+axs = ((p1_sec**2*G*(star_mass))/(4*(np.pi)**2))**(1.0/3.0)
+print("Planet 1 Mass: {} Jupiter's Masses, Semi-Major Axis: {} m".format((planet_mass[ind - 2])/m_j, axs))
+     
+k_values2 = []
+for M in planet_mass:
+    x2 = G**(1/2)*(star_mass + M)**(-1/2)*(((p2_sec**2*G*(star_mass))/(4*(np.pi)**2))**(1/3))**(-1/2)*M
+    k_values2.append(x2)
+diff2 = [i - k for i in k_values2]
+ind2 = diff2.index(min(i for i in diff2 if i > 0))
+axs2 = ((p2_sec**2*G*(star_mass))/(4*(np.pi)**2))**(1.0/3.0)
+print("Planet 2 Mass: {} Jupiter's Masses, Semi-Major Axis: {} m".format((planet_mass[ind2 - 2])/m_j, axs2))
+
+print("AU Planet 1: {} AU Planet 2: {}".format(axs/au, axs2/au))
+print("Star Radii Planet 1: {} Star Radii Planet 2: {}".format(axs/star_r_m, axs2/star_r_m))
+
+#double planet one mass while everthing else is the same and get amplitudes for both planets then plot new sine wave
+time_model = np.arange(0,3,.001)
+mass_double = (planet_mass[ind-2])*2
+amp1 = G**(1/2)*(star_mass + mass_double)**(-1/2)*(((p1_sec**2*G*(star_mass))/(4*(np.pi)**2))**(1/3))**(-1/2)*mass_double
+amp2 = G**(1/2)*(star_mass + planet_mass[ind2-2])**(-1/2)*(((p1_sec**2*G*(star_mass))/(4*(np.pi)**2))**(1/3))**(-1/2)*planet_mass[ind2-2]
+rv = amp1 * np.sin((time_model*2*math.pi)/min_periods[0]) + amp2 * np.sin((time_model*2*math.pi)/min_periods[1])
+rv_k = amp1 * np.sin((time_model*2*math.pi)/min_periods[0]) + k * np.sin((time_model*2*math.pi)/min_periods[1])
+plt.plot(time_model, rv, label = "New amp for both")
+plt.plot(time_model, rv_k, label = "K for second amp")
+plt.plot(time, model_sum, label = "Original Sine Wave")
+plt.xlabel("Time")
+plt.ylabel("Radial Velocity")
+plt.legend()
+plt.show()
+print("Amp 1: {}, Amp 2: {}".format(amp1,amp2))
