@@ -1,0 +1,81 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+G = 6.6743 * 10**-11
+solar_mass = 2 * 10**30
+earth_mass = 6 *10**24
+AU = 1.5 *10**11
+solar_radius = 7 * 10**8
+
+def metadata(filename):
+    for i in range(36):
+        f.readline()
+
+f = open("ajaaf477t2_mrt.txt", 'r')
+metadata(f)
+
+#read in table
+data = {}
+for elem in range(5391):
+    line = f.readline().strip().split()
+    if line[0] not in data:
+        data[str(line[0])] = []
+    data[str(line[0])].append(line[0:])
+
+#find individual planet RV sine wave
+for i in range(1,953):
+    x = str(i)
+    for j in range(0,len(data[x])):
+        e = float(data[x][j][-4])
+        period = float(data[x][j][8])*86400
+        i = float(data[x][j][-8])
+        Teff = int(data[x][j][2])
+        p_mass = float(data[x][j][-7])
+        
+        #finding star mass & radius
+        star_mass = -22.296508 + (1.5446387*10**-2)*Teff - (3.488452*10**-6)*(Teff**2) + (2.64961*10**-10)*(Teff**3)
+        star_radius = -16.883175 + 1.1835396*10**-2*Teff - (2.70872*10**-6)*(Teff**2) + 2.105028*10**-10*(Teff**3)
+        
+        p_mass = p_mass * earth_mass
+        star_mass = star_mass * solar_mass
+        star_radius = star_radius * solar_radius
+        
+        #finding semi-major axis both ways
+        a_r = float(data[x][j][-9])
+        a_table = star_radius*a_r
+        
+        #generating sine wave
+        time = np.arange(0,20,.1)
+        amp_table = G**(1/2)*(star_mass + p_mass)**(-1/2)*(a_table)**(-1/2)*p_mass*np.cos(i)
+        phase = np.random.uniform(0,2*np.pi)
+        RV = amp_table * np.sin(((time*2*np.pi)/(period/86400)) - phase)
+        
+        data[x][j] = RV
+
+
+#add individual planet sine wave to get total star RV
+rv_sum = [[]for i in range(953)] #lst[0] will be blank therefore index = star id 
+for i in range(1, 953):
+    x = str(i)
+    rv_sum[i] = np.add(data[x][0], data[x][1])
+    if len(data[x]) > 2:
+        for j in range(2, len(data[x])):
+            rv_sum[i] = np.add(rv_sum[i], data[x][1])
+
+plt.plot(time, rv_sum[1], label = "sum of two planets")
+plt.plot(time, data['1'][0], label = "planet one")
+plt.plot(time, data['1'][1], label = "planet two")
+plt.xlabel("Time (days)")
+plt.ylabel("Radial Velocity (m/s)")
+plt.title("Star One")
+plt.legend()
+plt.show()
+
+plt.plot(time, rv_sum[2], label = "sum of two planets")
+plt.plot(time, data['2'][0], label = "planet one")
+plt.plot(time, data['2'][1], label = "planet two")
+plt.xlabel("Time (days)")
+plt.ylabel("Radial Velocity (m/s)")
+plt.title("Star Two")
+plt.legend()
+plt.show()
