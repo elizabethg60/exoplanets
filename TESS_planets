@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import scipy.fftpack
+#from numpy.fft import fft, fftfreq
 
 G = 6.6743 * 10**-11
 solar_mass = 2 * 10**30
@@ -28,6 +30,7 @@ for i in range(1,953):
     for j in range(0,len(data[x])):
         e = float(data[x][j][-4])
         period = float(data[x][j][8])*86400
+        period_sin = float(data[x][j][8])
         i = float(data[x][j][-8])
         Teff = int(data[x][j][2])
         p_mass = float(data[x][j][-7])
@@ -45,13 +48,15 @@ for i in range(1,953):
         a_table = star_radius*a_r
         
         #generating sine wave
-        time = np.arange(0,20,.1)
+        #time = np.arange(0,20,.1)
+        N = 600
+        T = 0.01
+        time = np.linspace(0.0, N*T, N)
         amp_table = G**(1/2)*(star_mass + p_mass)**(-1/2)*(a_table)**(-1/2)*p_mass*np.cos(i)
         phase = np.random.uniform(0,2*np.pi)
-        RV = amp_table * np.sin(((time*2*np.pi)/(period/86400)) - phase)
+        RV = amp_table * np.sin((time*2*np.pi*period_sin) - phase)
         
         data[x][j] = RV
-
 
 #add individual planet sine wave to get total star RV
 rv_sum = [[]for i in range(953)] #lst[0] will be blank therefore index = star id 
@@ -62,14 +67,23 @@ for i in range(1, 953):
         for j in range(2, len(data[x])):
             rv_sum[i] = np.add(rv_sum[i], data[x][1])
 
-plt.plot(time, rv_sum[1], label = "sum of two planets")
-plt.plot(time, data['1'][0], label = "planet one")
-plt.plot(time, data['1'][1], label = "planet two")
+f = open("RV_values.txt", "w")
+for i in range(0, len(rv_sum)):    
+        f.write(str(rv_sum[i]))
+        f.write("\n")          
+
+'''
+plt.plot(time, rv_sum[5], label = "sum of four planets")
+plt.plot(time, data['5'][0], label = "planet one")
+plt.plot(time, data['5'][1], label = "planet two")
+plt.plot(time, data['5'][2], label = "planet three")
+plt.plot(time, data['5'][3], label = "planet four")
 plt.xlabel("Time (days)")
 plt.ylabel("Radial Velocity (m/s)")
-plt.title("Star One")
+plt.title("Star Five")
 plt.legend()
 plt.show()
+
 
 plt.plot(time, rv_sum[2], label = "sum of two planets")
 plt.plot(time, data['2'][0], label = "planet one")
@@ -79,3 +93,4 @@ plt.ylabel("Radial Velocity (m/s)")
 plt.title("Star Two")
 plt.legend()
 plt.show()
+'''
