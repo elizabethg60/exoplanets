@@ -9,7 +9,7 @@ def read_rv(filename):
     rv_sum[0] = f.readline().strip().split()
     for i in np.arange(1,953):
         x = f.readline().strip().strip('[').strip(']').split()      
-        while len(x) < 400:
+        while len(x) < 4000:
             x.extend(f.readline().strip().strip('[').strip(']').split() )
             rv_sum[i] = x
     return rv_sum
@@ -30,35 +30,38 @@ def read_table(filename):
     return data
 
 def fft(star_id, N, T): #star id, sample size, sample space
-    rv_sum = read_rv("RV_values.txt")
     data = read_table("ajaaf477t2_mrt.txt")
-    
+    f = open("RV_values.txt", 'r')   
+    rv_sum_5 = []
+    for i in range(4000):
+        rv_sum_5.append(f.readline().strip())
+       
     ID = str(star_id)
     detected_transit = []
+    true_periods = []
+    undetected = []
     for i in range(0,len(data[ID])):
+        true_periods.append(data['5'][i][8])
         if (data[ID][i][-1] == '1' and data[ID][i][-2] == '1'):
             detected_transit.append(data[ID][i][8]) 
-    
-    yf = scipy.fftpack.fft(rv_sum[star_id])
+        else:
+            undetected.append(data['5'][i][8])
+
+    yf = scipy.fftpack.fft(rv_sum_5)
     xf = np.linspace(0.0, 1.0/(2.0*T), N/2)
     fig, ax = plt.subplots()
-    ax.plot(xf, 2.0/N * np.abs(yf[:N//2]))
-   # for xc in detected_transit:
-    #    plt.axvline(x=xc, color='k', linestyle='--')
+    ax.plot(1/xf, 2.0/N * np.abs(yf[:N//2]))
+    plt.xlim(0,200)
+    y = [0,max(2.0/N * np.abs(yf[:N//2]))]
+    for i in range(0,len(detected_transit)):
+        x = [float(detected_transit[i]), float(detected_transit[i])]
+        plt.plot(x,y, color='r', linestyle='--')
+    for i in range(0,len(undetected)):
+        x = [float(undetected[i]), float(undetected[i])]
+        plt.plot(x,y, color='k', linestyle='--')
     plt.show()
-    
-    true_periods = []
-    for i in range(0,len(data[ID])):
-        true_periods.append(data[ID][i][8])
-    print("True Periods: {}".format(true_periods)) 
-    
-    #pks = find_peaks(yf)
-    #print(pks)
-    
-    x = 2.0/N * np.abs(yf[:N//2])
-    y = np.argwhere(x == max(x))
-    print(xf[y])
 
-    x = 2.0/N * np.abs(yf[:N//2])[0:20]
-    y = np.argwhere(x == max(x))
-    print(xf[y])
+    print("True Periods: {}".format(true_periods)) 
+    peaks, _ = find_peaks(2.0/N * np.abs(yf[:N//2]), height=0)
+    for i in peaks:
+        print(1/xf[i])
