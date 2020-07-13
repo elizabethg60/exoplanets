@@ -12,7 +12,80 @@ solar_radius = 7 * 10**8
 def metadata(filename):
     for i in range(36):
         f.readline()
+    
+def read_table(filename):
+    f = open(filename, 'r')
+    metadata(f)
+    data = {}
+    for elem in range(5391):
+        line = f.readline().strip().split()
+        if line[0] not in data:
+            data[str(line[0])] = []
+        data[str(line[0])].append(line[0:])
+    return data
 
+def fft(star_id, N, T): #star id, sample size, sample space
+    data = read_table("ajaaf477t2_mrt.txt")
+       
+    ID = str(star_id)
+    detected_transit = []
+    true_periods = []
+    undetected = []
+    for i in range(0,len(data[ID])):
+        true_periods.append(data['5'][i][8])
+        if (data[ID][i][-1] == '1' and data[ID][i][-2] == '1'):
+            detected_transit.append(data[ID][i][8]) 
+        else:
+            undetected.append(data['5'][i][8])
+
+    yf = scipy.fftpack.fft(rv_sum[5])
+    xf = np.linspace(0.0, 1.0/(2.0*T), N/2)
+    fig, ax = plt.subplots()
+    ax.plot(1/xf, 2.0/N * np.abs(yf[:N//2]))
+    y = [0,max(2.0/N * np.abs(yf[:N//2]))]
+    for i in range(0,len(detected_transit)):
+        x = [float(detected_transit[i]), float(detected_transit[i])]
+        plt.plot(x,y, color='r', linestyle='--')
+    for i in range(0,len(undetected)):
+        x = [float(undetected[i]), float(undetected[i])]
+        plt.plot(x,y, color='k', linestyle='--')
+    ax.set_xscale('log')
+    plt.show()
+     
+    found_periods = []
+    peaks, _ = find_peaks(2.0/N * np.abs(yf[:N//2]), height=2)
+    for i in peaks:
+        found_periods.append((1/xf[i]))
+    print("True Periods: {}".format(true_periods))
+    print("Found Periods: {}".format(sorted(found_periods)))
+    print("\n")
+    
+    true_amp = []
+    for i in range(0,len(data[ID])):
+        inc = float(data[ID][i][-8]) * (np.pi/180)
+        Teff = int(data[ID][i][2])
+        p_mass = float(data[ID][i][-7])
+        
+        star_mass = -22.296508 + (1.5446387*10**-2)*Teff - (3.488452*10**-6)*(Teff**2) + (2.64961*10**-10)*(Teff**3)
+        star_radius = -16.883175 + 1.1835396*10**-2*Teff - (2.70872*10**-6)*(Teff**2) + 2.105028*10**-10*(Teff**3)
+        
+        p_mass = p_mass * earth_mass
+        star_mass = star_mass * solar_mass
+        star_radius = star_radius * solar_radius
+        
+        a_r = float(data[ID][i][-9])
+        a_table = star_radius*a_r       
+
+        amp = G**(1/2)*(star_mass + p_mass)**(-1/2)*(a_table)**(-1/2)*p_mass*np.cos(inc)
+        true_amp.append(amp)
+    found_amp = []
+    for i in found_periods:    
+        x = np.argwhere(1/xf == i)
+        found_amp.append(2.0/N * np.abs(yf[:N//2])[x])
+    print("True Amplitudes: {}".format(sorted(true_amp)))
+    print("Found Amplitudes: {}".format(list(found_amp)))
+
+#generating sine waves
 f = open("ajaaf477t2_mrt.txt", 'r')
 metadata(f)
 
@@ -24,16 +97,6 @@ for elem in range(5391):
         data[str(line[0])] = []
     data[str(line[0])].append(line[0:])
 
-detected_transit = []    
-true_periods = []
-undetected = []
-for i in range(0,len(data['5'])):
-    true_periods.append(data['5'][i][8])
-    if (data['5'][i][-1] == '1' and data['5'][i][-2] == '1'):
-        detected_transit.append(data['5'][i][8]) 
-    else:
-        undetected.append(data['5'][i][8])
-
 #find individual planet RV sine wave
 for i in range(1,953):
     x = str(i)
@@ -41,7 +104,7 @@ for i in range(1,953):
         e = float(data[x][j][-4])
         period = float(data[x][j][8])*86400
         period_sin = float(data[x][j][8])
-        i = float(data[x][j][-8])
+        inc = float(data[x][j][-8]) * (np.pi/180)
         Teff = int(data[x][j][2])
         p_mass = float(data[x][j][-7])
         
@@ -61,9 +124,10 @@ for i in range(1,953):
         N = 4000
         T = 0.25
         time = np.linspace(0.0, N*T, N)
-        amp_table = G**(1/2)*(star_mass + p_mass)**(-1/2)*(a_table)**(-1/2)*p_mass*np.cos(i)
+        amp_table = G**(1/2)*(star_mass + p_mass)**(-1/2)*(a_table)**(-1/2)*p_mass*np.cos(inc)
         phase = np.random.uniform(0,2*np.pi)
-        RV = amp_table * np.sin(((time*2*np.pi)/period_sin) - phase)
+        noise = np.random.normal(0,5,N)
+        RV = amp_table * np.sin(((time*2*np.pi)/period_sin) - phase) + noise
         
         data[x][j] = RV
 
@@ -75,7 +139,7 @@ for i in range(1, 953):
     if len(data[x]) > 2:
         for j in range(2, len(data[x])):
             rv_sum[i] = np.add(rv_sum[i], data[x][j])
-   
+ 
 plt.plot(time, rv_sum[5], label = "sum of four planets")
 plt.plot(time, data['5'][0], label = "planet one")
 plt.plot(time, data['5'][1], label = "planet two")
@@ -86,29 +150,6 @@ plt.ylabel("Radial Velocity (m/s)")
 plt.title("Star Five")
 plt.legend()
 plt.show()
-
-     
-yf = scipy.fftpack.fft(rv_sum[5])
-xf = np.linspace(0.0, 1.0/(2.0*T), N/2)
-fig, ax = plt.subplots()
-ax.plot(1/xf, 2.0/N * np.abs(yf[:N//2]))
-plt.xlim(0,200)
-y = [0,max(2.0/N * np.abs(yf[:N//2]))]
-for i in range(0,len(detected_transit)):
-    x = [float(detected_transit[i]), float(detected_transit[i])]
-    plt.plot(x,y, color='r', linestyle='--')
-for i in range(0,len(undetected)):
-    x = [float(undetected[i]), float(undetected[i])]
-    plt.plot(x,y, color='k', linestyle='--')
-plt.show()
-
-
-print("True Periods: {}".format(true_periods))
-peaks, _ = find_peaks(2.0/N * np.abs(yf[:N//2]), height=0)
-for i in peaks:
-    print(1/xf[i])
-
-
 
 #fix between the two files
 '''
