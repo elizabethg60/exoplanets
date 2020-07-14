@@ -17,28 +17,30 @@ def read_table(filename):
     f = open(filename, 'r')
     metadata(f)
     data = {}
-    for elem in range(5391):
+    for elem in range(5427):
         line = f.readline().strip().split()
         if line[0] not in data:
             data[str(line[0])] = []
         data[str(line[0])].append(line[0:])
-    return data
-
+    return data        
+        
 def fft(star_id, N, T): #star id, sample size, sample space
-    data = read_table("ajaaf477t2_mrt.txt")
-       
     ID = str(star_id)
+    time = np.linspace(0.0, N*T, N)
+    
+    data_table = read_table("ajaaf477t2_mrt.txt")    
+    
     detected_transit = []
     true_periods = []
     undetected = []
-    for i in range(0,len(data[ID])):
-        true_periods.append(data['5'][i][8])
-        if (data[ID][i][-1] == '1' and data[ID][i][-2] == '1'):
-            detected_transit.append(data[ID][i][8]) 
+    for i in range(0,len(data_table[ID])):
+        true_periods.append(data_table[ID][i][8])
+        if (data_table[ID][i][-1] == '1' and data_table[ID][i][-2] == '1'):
+            detected_transit.append(data_table[ID][i][8]) 
         else:
-            undetected.append(data['5'][i][8])
+            undetected.append(data_table[ID][i][8])
 
-    yf = scipy.fftpack.fft(rv_sum[5])
+    yf = scipy.fftpack.fft(rv_sum[star_id])
     xf = np.linspace(0.0, 1.0/(2.0*T), N/2)
     fig, ax = plt.subplots()
     ax.plot(1/xf, 2.0/N * np.abs(yf[:N//2]))
@@ -53,18 +55,21 @@ def fft(star_id, N, T): #star id, sample size, sample space
     plt.show()
      
     found_periods = []
-    peaks, _ = find_peaks(2.0/N * np.abs(yf[:N//2]), height=2)
+    peaks, _ = find_peaks(2.0/N * np.abs(yf[:N//2]), height=1.5)
     for i in peaks:
         found_periods.append((1/xf[i]))
+    found_periods.reverse()
+    for i in range(0, len(true_periods)): 
+        true_periods[i] = float(true_periods[i]) 
     print("True Periods: {}".format(true_periods))
-    print("Found Periods: {}".format(sorted(found_periods)))
+    print("Found Periods: {}".format(found_periods))
     print("\n")
     
     true_amp = []
-    for i in range(0,len(data[ID])):
-        inc = float(data[ID][i][-8]) * (np.pi/180)
-        Teff = int(data[ID][i][2])
-        p_mass = float(data[ID][i][-7])
+    for i in range(0,len(data_table[ID])):
+        inc = float(data_table[ID][i][-8]) * (np.pi/180)
+        Teff = int(data_table[ID][i][2])
+        p_mass = float(data_table[ID][i][-7])
         
         star_mass = -22.296508 + (1.5446387*10**-2)*Teff - (3.488452*10**-6)*(Teff**2) + (2.64961*10**-10)*(Teff**3)
         star_radius = -16.883175 + 1.1835396*10**-2*Teff - (2.70872*10**-6)*(Teff**2) + 2.105028*10**-10*(Teff**3)
@@ -73,7 +78,7 @@ def fft(star_id, N, T): #star id, sample size, sample space
         star_mass = star_mass * solar_mass
         star_radius = star_radius * solar_radius
         
-        a_r = float(data[ID][i][-9])
+        a_r = float(data_table[ID][i][-9])
         a_table = star_radius*a_r       
 
         amp = G**(1/2)*(star_mass + p_mass)**(-1/2)*(a_table)**(-1/2)*p_mass*np.cos(inc)
@@ -81,9 +86,57 @@ def fft(star_id, N, T): #star id, sample size, sample space
     found_amp = []
     for i in found_periods:    
         x = np.argwhere(1/xf == i)
-        found_amp.append(2.0/N * np.abs(yf[:N//2])[x])
-    print("True Amplitudes: {}".format(sorted(true_amp)))
+        found_amp.append(float(2.0/N * np.abs(yf[:N//2])[x]))
+    print("True Amplitudes: {}".format(true_amp))
     print("Found Amplitudes: {}".format(list(found_amp)))
+    
+    #given sine waves
+    plt.plot(time, rv_sum[star_id], label = "sum of {} planets".format(len(data[ID])))
+    for i in range(0, len(data[ID])):
+        plt.plot(time, data[ID][i], label = "planet {}".format(i+1))
+    plt.xlabel("Time (days)")
+    plt.ylabel("Radial Velocity (m/s)")
+    plt.title("True - Star {}".format(star_id))
+    plt.legend()
+    plt.show()
+
+    #found sine waves 
+    found_planet_sine = [[]for i in range(len(found_periods))]
+    phase = np.random.uniform(0,2*np.pi)
+    for i in range(0, len(found_periods)):
+        sine = found_amp[i] * np.sin(((time*2*np.pi)/found_periods[i]) - phase)
+        found_planet_sine[i] = sine
+    star_RV = np.add(found_planet_sine[0], found_planet_sine[1])
+    if len(found_planet_sine) > 2:
+        for i in range(2, len(found_planet_sine)):
+            star_RV = np.add(star_RV, found_planet_sine[i])
+    plt.plot(time, star_RV, label = "sum of {} planets".format(len(found_planet_sine)))
+    for i in range(0,len(found_periods)):
+        plt.plot(time, found_planet_sine[i], label = "planet {}".format(i+1))
+    plt.xlabel("Time (days)")
+    plt.ylabel("Radial Velocity (m/s)")
+    plt.title("Calculated - Star {}".format(star_id))
+    plt.legend()
+    plt.show()
+    
+    #detected transits sine wave
+    loc = []
+    for i in detected_transit:
+        loc.append(true_periods.index(float(i)))    
+    plt.plot(time, rv_sum[star_id], label = "True RV")
+    plt.plot(time, star_RV, label = "Found RV")
+    for i in loc:
+        sine = true_amp[int(i)] * np.sin(((time*2*np.pi)/true_periods[int(i)]) - phase)
+        plt.plot(time, sine, label = "True transits")
+    for i in loc:
+        sine = found_amp[int(i)] * np.sin(((time*2*np.pi)/found_periods[int(i)]) - phase)
+        plt.plot(time, sine, label = "Found transits")
+    plt.xlabel("Time (days)")
+    plt.ylabel("Radial Velocity (m/s)")
+    plt.title("Detected Transits - Star {}".format(star_id))
+    plt.legend()
+    plt.show()
+    
 
 #generating sine waves
 f = open("ajaaf477t2_mrt.txt", 'r')
@@ -139,17 +192,6 @@ for i in range(1, 953):
     if len(data[x]) > 2:
         for j in range(2, len(data[x])):
             rv_sum[i] = np.add(rv_sum[i], data[x][j])
- 
-plt.plot(time, rv_sum[5], label = "sum of four planets")
-plt.plot(time, data['5'][0], label = "planet one")
-plt.plot(time, data['5'][1], label = "planet two")
-plt.plot(time, data['5'][2], label = "planet three")
-plt.plot(time, data['5'][3], label = "planet four")
-plt.xlabel("Time (days)")
-plt.ylabel("Radial Velocity (m/s)")
-plt.title("Star Five")
-plt.legend()
-plt.show()
 
 #fix between the two files
 '''
