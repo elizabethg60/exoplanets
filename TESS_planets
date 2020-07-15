@@ -9,6 +9,10 @@ earth_mass = 6 *10**24
 AU = 1.5 *10**11
 solar_radius = 7 * 10**8
 
+def groups(lst, n):
+    for i in range(0,len(lst), n):
+        yield lst[i:i+n]
+
 def metadata(filename):
     for i in range(36):
         f.readline()
@@ -99,12 +103,13 @@ def fft(star_id, N, T): #star id, sample size, sample space
     plt.title("True - Star {}".format(star_id))
     plt.legend()
     plt.show()
-
+          
     #found sine waves 
     found_planet_sine = [[]for i in range(len(found_periods))]
     phase = np.random.uniform(0,2*np.pi)
+    noise = np.random.normal(0,0,N)
     for i in range(0, len(found_periods)):
-        sine = found_amp[i] * np.sin(((time*2*np.pi)/found_periods[i]) - phase)
+        sine = found_amp[i] * np.sin(((time*2*np.pi)/found_periods[i]) - phase) + noise
         found_planet_sine[i] = sine
     star_RV = np.add(found_planet_sine[0], found_planet_sine[1])
     if len(found_planet_sine) > 2:
@@ -118,7 +123,7 @@ def fft(star_id, N, T): #star id, sample size, sample space
     plt.title("Calculated - Star {}".format(star_id))
     plt.legend()
     plt.show()
-    
+  
     #detected transits sine wave
     loc = []
     for i in detected_transit:
@@ -126,17 +131,50 @@ def fft(star_id, N, T): #star id, sample size, sample space
     plt.plot(time, rv_sum[star_id], label = "True RV")
     plt.plot(time, star_RV, label = "Found RV")
     for i in loc:
-        sine = true_amp[int(i)] * np.sin(((time*2*np.pi)/true_periods[int(i)]) - phase)
+        sine = true_amp[int(i)] * np.sin(((time*2*np.pi)/true_periods[int(i)]) - phase) + noise
         plt.plot(time, sine, label = "True transits")
     for i in loc:
-        sine = found_amp[int(i)] * np.sin(((time*2*np.pi)/found_periods[int(i)]) - phase)
+        sine = found_amp[int(i)] * np.sin(((time*2*np.pi)/found_periods[int(i)]) - phase) + noise
         plt.plot(time, sine, label = "Found transits")
     plt.xlabel("Time (days)")
     plt.ylabel("Radial Velocity (m/s)")
     plt.title("Detected Transits - Star {}".format(star_id))
     plt.legend()
+    plt.show()  
+
+'''   
+    color = ['r','b','g','y']       
+    for i in range(0, len(true_periods)):
+        div = int(round((max(time)- min(time)) / true_periods[i]))
+        n = len(time)//div
+        x = list(groups(data[ID][i],n))
+        for j in range(0,len(x)-1):
+            plt.scatter(time[0:n], x[j], color = color[i])
+        time_model2 = np.arange(0, true_periods[i], 0.001)
+        plt.plot(time_model2, true_amp[i] * np.sin((time_model2*2*np.pi)/true_periods[i]), color = color[i])
+    plt.xlabel("Phase")
+    plt.title("True - RV v Phase")
+    plt.ylabel("Radial Velocity")
+    #plt.xlim(0, true_periods[0])
+    plt.show() 
+
+    for i in range(0, len(true_periods)):
+        div = int(round((max(time)- min(time)) / true_periods[i]))
+        n = len(time)//div
+        x = list(groups(data[ID][i],n))
+        for j in range(0,len(x)-1):
+            plt.scatter(time[0:n], x[j], color = 'r')
+        div = int(round((max(time)- min(time)) / found_periods[i]))
+        n = len(time)//div
+        x = list(groups(data[ID][i],n))
+        for j in range(0,len(x)-1):
+            plt.scatter(time[0:n], x[j],s = 0.1, color = 'b')
+    plt.xlabel("Phase")
+    plt.title("True (red) found (blue) - RV v Phase")
+    plt.xlim(0, true_periods[-1])
+    plt.ylabel("Radial Velocity")
     plt.show()
-    
+'''
 
 #generating sine waves
 f = open("ajaaf477t2_mrt.txt", 'r')
@@ -179,7 +217,7 @@ for i in range(1,953):
         time = np.linspace(0.0, N*T, N)
         amp_table = G**(1/2)*(star_mass + p_mass)**(-1/2)*(a_table)**(-1/2)*p_mass*np.cos(inc)
         phase = np.random.uniform(0,2*np.pi)
-        noise = np.random.normal(0,5,N)
+        noise = np.random.normal(0,0,N)
         RV = amp_table * np.sin(((time*2*np.pi)/period_sin) - phase) + noise
         
         data[x][j] = RV
