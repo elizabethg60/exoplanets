@@ -1,60 +1,35 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import math
-
-#x-axis: 3 day orbit
-time = np.arange(0,3,.1)
-#test rv values
-rv_initial = 500 * np.sin((2*math.pi*time)/3)
-noise1 = np.random.normal(0, 50, 30)
-rv2 = rv_initial + noise1
-
-#writing to text file
-def write2(filename):
-    f = open(filename, "w")
-    for i in range(0, len(time)):
-        f.write(str(time[i]))
-        f.write("\n")
 
 def read(filename):
-    import numpy as np
     f = open(filename, 'r')
-    f.readline()
-    rv = np.loadtxt(f)[:, 1]
-    return rv
+    rv = []
+    for i in range(0,3896):
+        rv.append(f.readline().strip().strip('\n'))
+    for i in range(0, len(rv)): 
+        rv[i] = float(rv[i]) 
+    return np.array(rv)
 
 def model(filename):    
     #extracting rv values
     rv_model = read(filename)
-    print(rv_model)
-    
-    #x-axis: 3 day orbit
-    time = np.arange(0,3,3/len(rv_model))
-    
-    #plotting time vs provided rv data
-    plt.scatter(time, rv_model)
-    plt.xlabel("Time")
-    plt.title("Radial Velocity vs Time")
-    plt.ylabel("Radial Velocity")
-    plt.xlim(0, 3)
-    plt.ylim(-1000,1000)
-    plt.show()
-    
+    time = np.linspace(0.0, len(rv_model)*0.25, len(rv_model))
+
     #chisquared b/w provided rv data and sin waves with dif amplitudes
-    amp = np.arange(0,1005,5)
+    amp = np.arange(0,20,0.5)
     chi_squared = []
-    for i in range(0,len(amp)):
-        rv_element = amp[i] * np.sin((2*math.pi*time)/3)
-        chi_squared_stat = sum(((rv_element-rv_model)**2)/50**2)
+    for i in range(0, len(amp)):
+        rv_element = amp[i] * np.sin((2*np.pi*time)/13.67)
+        chi_squared_stat = sum(((rv_element - rv_model)**2)/50**2)
         chi_squared.append(chi_squared_stat)
-        
+       
     #plotting semiaplitude and chisquared
     plt.plot(amp, chi_squared)
     plt.title("Chisquared vs Semi-amplitude")
     plt.xlabel("Semi-amplitude")
     plt.ylabel("Chisquared")
-    plt.ylim(0,1000)
-    
+    #plt.ylim(0,1000)
+   
     #find the semiaplitude with min chisquared
     min_y = min(chi_squared)
     min_x = amp[chi_squared.index(min_y)]
@@ -69,3 +44,18 @@ def model(filename):
     print("Minimum Amplitude: {}".format(min_x))
     print("Minimum Chisquared: {}".format(min_y))
     print("Confidence Interval: {}".format(amp[idx]))
+    
+    #actual data
+    plt.scatter(time, rv_model, color = 'r', label = "True Data") 
+    #best model - upper bound
+    best_model2 = (amp[idx])[1] * np.sin((2*np.pi*time)/13.67)
+    plt.plot(time, best_model2, label = "Upper Semiamplitude")
+    #best model - lower bound
+    best_model1 = (amp[idx])[0] * np.sin((2*np.pi*time)/13.67)
+    plt.plot(time, best_model1, label = "Lower Semiamplitude")
+    #best model - minimum semi-amp 
+    best_model = min_x * np.sin((2*np.pi*time)/13.67)
+    plt.plot(time, best_model, label = "Best Model")    
+    plt.title("Model of Best Fit")
+    plt.legend()
+    plt.show()
