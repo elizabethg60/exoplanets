@@ -9,10 +9,6 @@ earth_mass = 6 *10**24
 AU = 1.5 *10**11
 solar_radius = 7 * 10**8
 
-def groups(lst, n):
-    for i in range(0,len(lst), n):
-        yield lst[i:i+n]
-
 def metadata(filename):
     for i in range(36):
         f.readline()
@@ -108,10 +104,10 @@ def fft(star_id, N, T): #star id, sample size, sample space
           
     #found sine waves 
     found_planet_sine = [[]for i in range(len(found_periods))]
-    phase = np.random.uniform(0,2*np.pi)
+    #phase = np.random.uniform(0,2*np.pi)
     noise = np.random.normal(0,1,N)
     for i in range(0, len(found_periods)):
-        sine = found_amp[i] * np.sin(((time*2*np.pi)/found_periods[i]) - phase) + noise
+        sine = found_amp[i] * np.sin(((time*2*np.pi)/found_periods[i]) - phase_list[star_id][i]) + noise
         found_planet_sine[i] = sine
     star_RV = np.add(found_planet_sine[0], found_planet_sine[1])
     if len(found_planet_sine) > 2:
@@ -135,30 +131,31 @@ def fft(star_id, N, T): #star id, sample size, sample space
     axs[0].plot(time, rv_sum[star_id], label = "True RV")
     axs[0].plot(time, rv_sum[star_id] - data[ID][0], label = "True RV Minus Planet 1")
     for i in loc:
-        sine = true_amp[int(i)] * np.sin(((time*2*np.pi)/true_periods[int(i)]) - phase) + noise
+        sine = true_amp[int(i)] * np.sin(((time*2*np.pi)/true_periods[int(i)]) - phase_list[star_id][i]) + noise
         axs[0].plot(time, sine, label = "True transits")
     axs[0].legend()
     axs[1].plot(time, star_RV, label = "Found RV")
     axs[1].plot(time, star_RV - found_planet_sine[0], label = "Found RV Minus Planet 1")
     for i in loc:
-        sine = found_amp[int(i)] * np.sin(((time*2*np.pi)/found_periods[int(i)]) - phase) + noise
+        sine = found_amp[int(i)] * np.sin(((time*2*np.pi)/found_periods[int(i)]) - phase_list[star_id][i]) + noise
         axs[1].plot(time, sine, label = "Found transits")
     plt.xlabel("Time (days)")
     plt.ylabel("Radial Velocity (m/s)")
     plt.legend()
     plt.show()  
-    
+ 
     minus_planet1 = star_RV - found_planet_sine[0]
-    plt.plot(time, star_RV, label = "Found RV")
-    plt.plot(time, found_amp[int(loc[0])] * np.sin(((time*2*np.pi)/found_periods[int(loc[0])] - phase)), label = "Transit")
-    plt.scatter(time, minus_planet1, color = 'r', label = "Found RV Minus Planet 1")
-    plt.xlim(0,15)
-    plt.xlabel("Time (days)")
-    plt.ylabel("Radial Velocity (m/s)")
-    plt.legend()
-    plt.title("Detected Transits - Star {}".format(star_id))
-    plt.show()
-    
+    for i in loc:     
+        plt.plot(time % found_periods[i], star_RV, '.', label = "Found RV")
+        plt.plot(time % found_periods[i], minus_planet1, 'r.', label = "Found RV Minus Planet 1")
+        plt.plot(time % found_periods[i], found_amp[i] * np.sin((((time % found_periods[i])*2*np.pi)/found_periods[i] - phase_list[star_id][i])), '.', label = "Transit")
+        plt.xlim(0, found_periods[i])
+        plt.xlabel("Time (days)")
+        plt.ylabel("Radial Velocity (m/s)")
+        plt.legend()
+        plt.title("Detected Transits - Star {}".format(star_id))
+        plt.show()
+   
     f = open("found_rv_minus_planet1.txt", "w")    
     for i in range(0, len(time)):
         f.write(str(minus_planet1[i]))
@@ -170,52 +167,19 @@ def fft(star_id, N, T): #star id, sample size, sample space
         found = star_RV
         for j in planets:
             if i != j:
-                #print(j)
                 true = true - data[ID][j]
                 found = found - found_planet_sine[j]  
-        #true = true - data[ID][0]
-        #found = found - found_planet_sine[0]
-        div = int(round((max(time)- min(time)) / true_periods[i]))
-        n = len(time)//div
-        x = list(groups(true,n))
-        for j in range(0,len(x)-1):
-            true = plt.scatter(time[0:n], x[j], color = 'r', label = 'True')
-            true
-        plt.plot(time[0:n], true_amp[i] * np.sin((time[0:n]*2*np.pi)/true_periods[i]), color = 'y')
-        div = int(round((max(time)- min(time)) / found_periods[i]))
-        n = len(time)//div
-        x = list(groups(found,n))
-        for j in range(0,len(x)-1):
-            found = plt.scatter(time[0:n], x[j],s = 0.8, color = 'b', label = 'Found')
-            found
-        plt.plot(time[0:n], found_amp[i] * np.sin((time[0:n]*2*np.pi)/found_periods[i]), color = 'g')
-        plt.xlabel("Phase")
-        plt.title("Star {} Planet {} - RV v Phase".format(star_id, int(i + 1)))
-        plt.ylabel("Radial Velocity")
-        plt.legend(handles=[true, found])
-        plt.show()      
-'''    
-    for i in range(0, len(true_periods)):
-        div = int(round((max(time)- min(time)) / true_periods[i]))
-        n = len(time)//div
-        x = list(groups(data[ID][i],n))
-        for j in range(0,len(x)-1):
-            true = plt.scatter(time[0:n], x[j], color = 'r', label = 'True')
-            true
-        plt.plot(time[0:n], true_amp[i] * np.sin((time[0:n]*2*np.pi)/true_periods[i]), color = 'y')
-        div = int(round((max(time)- min(time)) / found_periods[i]))
-        n = len(time)//div
-        x = list(groups(data[ID][i],n))
-        for j in range(0,len(x)-1):
-            found = plt.scatter(time[0:n], x[j],s = 0.8, color = 'b', label = 'Found')
-            found
-        plt.plot(time[0:n], found_amp[i] * np.sin((time[0:n]*2*np.pi)/found_periods[i]), color = 'g')
-        plt.xlabel("Phase")
-        plt.title("Star {} Planet {} - RV v Phase".format(star_id, int(i + 1)))
-        plt.ylabel("Radial Velocity")
-        plt.legend(handles=[true, found])
+        plt.plot(time % found_periods[i], found, '.', label = "Found RV")        
+        plt.plot(time % true_periods[i], true, '.', label = "True RV")
+        plt.plot(time % true_periods[i], true_amp[i] * np.sin(((time % true_periods[i])*2*np.pi)/true_periods[i] - phase_list[star_id][i]), 'g.', label = "True")
+        plt.plot(time % found_periods[i], found_amp[i] * np.sin(((time % found_periods[i])*2*np.pi)/found_periods[i] - phase_list[star_id][i]), 'y.', label = "Found")
+        plt.xlim(0,found_periods[i])
+        plt.legend()
+        plt.xlabel("Time (days)")
+        plt.ylabel("Radial Velocity (m/s)")
+        plt.title("Detected Transits - Star {} Planet {}".format(star_id, i+1))
         plt.show()
-'''
+
 #generating sine waves
 f = open("ajaaf477t2_mrt.txt", 'r')
 metadata(f)
@@ -229,6 +193,7 @@ for elem in range(5391):
     data[str(line[0])].append(line[0:])
 
 #find individual planet RV sine wave
+phase_list = [[]for i in range(953)]
 for i in range(1,953):
     x = str(i)
     for j in range(0,len(data[x])):
@@ -256,11 +221,12 @@ for i in range(1,953):
         T = 0.25
         time = np.linspace(0.0, N*T, N)
         amp_table = G**(1/2)*(star_mass + p_mass)**(-1/2)*(a_table)**(-1/2)*p_mass*np.cos(inc)
-        phase = np.random.uniform(0,2*np.pi)
         noise = np.random.normal(0,1,N)
+        phase = np.random.uniform(0,2*np.pi)
         RV = amp_table * np.sin(((time*2*np.pi)/period_sin - phase)) + noise
         
         data[x][j] = RV
+        phase_list[i].append(phase)
 
 #add individual planet sine wave to get total star RV
 rv_sum = [[]for i in range(953)] #lst[0] will be blank therefore index = star id 
