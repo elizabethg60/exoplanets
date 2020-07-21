@@ -145,7 +145,7 @@ def fft(star_id, N, T): #star id, sample size, sample space
     plt.show()  
  
     minus_planet1 = star_RV - found_planet_sine[0]
-    for i in loc:     
+    for i in loc:    
         plt.plot(time % found_periods[i], star_RV, '.', label = "Found RV")
         plt.plot(time % found_periods[i], minus_planet1, 'r.', label = "Found RV Minus Planet 1")
         plt.plot(time % found_periods[i], found_amp[i] * np.sin((((time % found_periods[i])*2*np.pi)/found_periods[i] - phase_list[star_id][i])), '.', label = "Transit")
@@ -156,12 +156,16 @@ def fft(star_id, N, T): #star id, sample size, sample space
         plt.title("Detected Transits - Star {}".format(star_id))
         plt.show()
    
-    f = open("found_rv_minus_planet1.txt", "w")    
+    f = open("found_rv_minus_planet1.txt", "w")   
+    f.write(str(found_periods[1]))
+    f.write("\n")
+    f.write(str(phase_list[star_id][1]))
+    f.write("\n")
     for i in range(0, len(time)):
         f.write(str(minus_planet1[i]))
         f.write("\n")
     
-    planets = np.arange(0, len(true_periods))
+    planets = np.arange(0, len(true_periods))   
     for i in range(0, len(true_periods)):
         true = rv_sum[star_id]
         found = star_RV
