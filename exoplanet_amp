@@ -57,6 +57,7 @@ def model(filename):
     
     bin_means, bin_edges, binnumber = stats.binned_statistic(time % found_period,
          rv_model, statistic='median', bins=20)
+    bin_width = (bin_edges[1] - bin_edges[0])
 
     stds = []
     pairs = zip(rv_model, binnumber)
@@ -72,9 +73,10 @@ def model(filename):
         bin_centers.append(center)
 
     plt.figure()
-    plt.errorbar(bin_centers, bin_means, yerr=stds, fmt='o')
-    #plt.hlines(bin_means, bin_edges[:-1], bin_edges[1:], colors='g', lw=5,
-     #   label='binned statistic of data')
+    #plt.errorbar(bin_centers, bin_means, yerr=stds, fmt='o')
+    plt.hlines(bin_means, bin_edges[:-1], bin_edges[1:], colors='g', lw=5,
+        label='binned statistic of data')
     #plt.vlines(bin_centers, bin_means - stds, bin_means + stds)
-    #plt.legend()
+    plt.plot((binnumber - 0.5) * bin_width, rv_model, '.', alpha=0.5)
+    plt.legend()
     plt.show()
