@@ -67,10 +67,24 @@ def fft(star_id, N, T): #star id, sample size, sample space
     found_periods.reverse()
     for i in range(0, len(true_periods)): 
         true_periods[i] = float(true_periods[i]) 
+    
+    found_index = []
+    for i in found_periods:
+        diff = []
+        for j in true_periods:
+            x = np.abs(i-j)
+            diff.append(x)            
+        index = np.argmin(diff)
+        found_index.append(index)
+    true_index = np.arange(0, len(true_periods))
+    diff_index = [x for x in true_index if x not in found_index]
+    for i in diff_index:
+        found_periods.insert(i, float(0)) #0 indicits not found
+    list(found_periods)
     print("True Periods: {}".format(true_periods))
     print("Found Periods: {}".format(found_periods))
     print("\n")
-    
+   
     true_amp = []
     for i in range(0,len(data_table[ID])):
         inc = float(data_table[ID][i][-8]) * (np.pi/180)
@@ -90,12 +104,16 @@ def fft(star_id, N, T): #star id, sample size, sample space
         amp = G**(1/2)*(star_mass + p_mass)**(-1/2)*(a_table)**(-1/2)*p_mass*np.cos(inc)
         true_amp.append(amp)
     found_amp = []
-    for i in found_periods:    
-        x = np.argwhere(1/xf == i)
-        found_amp.append(float(2.0/N * np.abs(yf[:N//2])[x]))
+    for i in found_periods:
+        if i != 0:
+            x = np.argwhere(1/xf == i)
+            found_amp.append(float(2.0/N * np.abs(yf[:N//2])[x]))
+        if i == 0:
+            found_amp.insert(id(i), float(0)) #0 indicts not found
+    list(found_amp)
     print("True Amplitudes: {}".format(true_amp))
     print("Found Amplitudes: {}".format(list(found_amp)))
-    
+   
     #given sine waves  
     plt.plot(time, rv_sum[star_id], label = "sum of {} planets".format(len(data[ID])))
     for i in range(0, len(data[ID])):
@@ -112,9 +130,11 @@ def fft(star_id, N, T): #star id, sample size, sample space
     for i in range(0, len(found_periods)):
         sine = found_amp[i] * np.sin(((time*2*np.pi)/found_periods[i]) - phase_list[star_id][i]) + noise
         found_planet_sine[i] = sine
+    for i in diff_index:
+        found_planet_sine[i] = [0] * len(found_planet_sine[1])      
     star_RV = np.add(found_planet_sine[0], found_planet_sine[1])
     if len(found_planet_sine) > 2:
-        for i in range(2, len(found_planet_sine)):
+        for i in range(2, len(found_planet_sine)):           
             star_RV = np.add(star_RV, found_planet_sine[i])
     plt.plot(time, star_RV, label = "sum of {} planets".format(len(found_planet_sine)))
     for i in range(0,len(found_periods)):
@@ -124,7 +144,7 @@ def fft(star_id, N, T): #star id, sample size, sample space
     plt.title("Calculated - Star {}".format(star_id))
     plt.legend()
     plt.show()
-    
+   
     #detected transits sine wave    
     loc = []
     for i in detected_transit:
@@ -199,6 +219,7 @@ def fft(star_id, N, T): #star id, sample size, sample space
         for j in range(0, len(found_planet_sine[i])):
             f.write(str(found_planet_sine[i][j]))
             f.write("\n")
+
 '''
     f = open("found_rv_minus_planet1.txt", "w")   
     f.write(str(found_periods[1]))
