@@ -55,28 +55,24 @@ def model(filename):
     plt.plot(time % found_period, min_x * np.sin((2*np.pi*(time % found_period))/found_period - phase), '.')
     plt.show()
     
-    bin_means, bin_edges, binnumber = stats.binned_statistic(time % found_period,
-         rv_model, statistic='median', bins=20)
-    bin_width = (bin_edges[1] - bin_edges[0])
-
-    stds = []
-    pairs = zip(rv_model, binnumber)
-
-    for n in list(set(binnumber)): 
-        in_bin = [x for x, nbin in pairs if nbin == n]
-        stds.append(np.std(in_bin))
-
+    xdata = time % found_period
+    ydata = rv_model
+    nbins = 10
+    bin_means = []
+    bin_stds = []
     bin_centers = []
+    binsize=(np.max(xdata)-np.min(xdata))/(nbins+1)
+    
+    for n in range(0, nbins+1):
+        x_start = np.min(xdata)+binsize*n
+        x_end = x_start+binsize
+        index=[(np.where((xdata >= x_start) & (xdata <= x_end)))]
+        mean_val=np.mean(ydata[index])
+        noise=np.std(ydata[index])
+        bin_means.append(mean_val)
+        bin_stds.append(noise)
+        bin_centers.append(np.mean([x_start,x_end]))
 
-    for i in range(len(bin_edges) -  1):
-        center = bin_edges[i] + (float(bin_edges[i + 1]) - float(bin_edges[i]))/2.
-        bin_centers.append(center)
-
-    plt.figure()
-    #plt.errorbar(bin_centers, bin_means, yerr=stds, fmt='o')
-    plt.hlines(bin_means, bin_edges[:-1], bin_edges[1:], colors='g', lw=5,
-        label='binned statistic of data')
-    #plt.vlines(bin_centers, bin_means - stds, bin_means + stds)
-    plt.plot((binnumber - 0.5) * bin_width, rv_model, '.', alpha=0.5)
-    plt.legend()
+    #plt.plot(xdata,ydata,'.')
+    plt.errorbar(bin_centers,bin_means,yerr=bin_stds)
     plt.show()
