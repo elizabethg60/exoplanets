@@ -230,7 +230,145 @@ def fft(star_id, N, T): #star id, sample size, sample space
     print("True Amplitudes: {}".format(list(round(num, 2) for num in true_amp)))
     print("Found Amplitudes: {}".format(list(round(num, 2) for num in found_amp)))
     print("Fitted Amplitudes: {}".format(list(round(num, 2) for num in fit_amp)))
+ 
+ def fft_noplots(star_id, N, T): #star id, sample size, sample space
+    ID = str(star_id)
+    time = np.linspace(0.0, N*T, N)    
+    data_table = read_table("ajaaf477t2_mrt.txt") 
     
+    #appends periods into appropriate list based on if transit/detected or not
+    detected_transit = []
+    true_periods = []
+    undetected = []
+    for i in range(0,len(data_table[ID])):
+        true_periods.append(data_table[ID][i][8])
+        if (data_table[ID][i][-1] == '1' and data_table[ID][i][-2] == '1'):
+            detected_transit.append(data_table[ID][i][8]) 
+        else:
+            undetected.append(data_table[ID][i][8])
+
+    #runs fft rv_sum[star_id] that is created outside this function
+    yf = scipy.fftpack.fft(rv_sum[star_id])
+    xf = np.linspace(0.0, 1.0/(2.0*T), N/2)    
+    #determines location on x-axis of peaks aka found_periods
+    found_periods = []
+    peaks, _ = find_peaks(2.0/N * np.abs(yf[:N//2]), height=1.0)
+    for i in peaks:
+        found_periods.append((1/xf[i]))
+    found_periods.reverse()
+    for i in range(0, len(true_periods)): 
+        true_periods[i] = float(true_periods[i]) 
+    
+    #corrects the index of found periods in case not all are found in fft
+    found_index = []
+    for i in found_periods:
+        diff = []
+        for j in true_periods:
+            x = np.abs(i-j)
+            diff.append(x)            
+        index = np.argmin(diff)
+        found_index.append(index)
+    true_index = np.arange(0, len(true_periods))
+    diff_index = [x for x in true_index if x not in found_index]
+    for i in diff_index:
+        found_periods.insert(i, float(0)) #0 indicits not found
+    list(found_periods)
+   
+    #determines true amp of planets rv curve based on kelper's 3rd law
+    true_amp = []
+    for i in range(0,len(data_table[ID])):
+        inc = float(data_table[ID][i][-8]) * (np.pi/180)
+        Teff = int(data_table[ID][i][2])
+        p_mass = float(data_table[ID][i][-7])
+        
+        star_mass = -22.296508 + (1.5446387*10**-2)*Teff - (3.488452*10**-6)*(Teff**2) + (2.64961*10**-10)*(Teff**3)
+        star_radius = -16.883175 + 1.1835396*10**-2*Teff - (2.70872*10**-6)*(Teff**2) + 2.105028*10**-10*(Teff**3)
+        
+        p_mass = p_mass * earth_mass
+        star_mass = star_mass * solar_mass
+        star_radius = star_radius * solar_radius
+        
+        a_r = float(data_table[ID][i][-9])
+        a_table = star_radius*a_r       
+
+        amp = G**(1/2)*(star_mass + p_mass)**(-1/2)*(a_table)**(-1/2)*p_mass*np.cos(inc)
+        true_amp.append(amp)
+    #determines found amp of planets rv curved based of peaks heights in fft
+    found_amp = []
+    for i in found_periods:
+        if i != 0:
+            x = np.argwhere(1/xf == i)
+            found_amp.append(float(2.0/N * np.abs(yf[:N//2])[x]))
+        if i == 0:
+            found_amp.insert(id(i), float(0)) #0 indicts not found
+    list(found_amp)
+          
+    #found sine waves from fft
+    found_planet_sine = [[]for i in range(len(found_periods))]
+    noise = np.random.normal(0,1,N)
+    for i in range(0, len(found_periods)):
+        sine = found_amp[i] * np.sin(((time*2*np.pi)/found_periods[i]) - phase_list[star_id][i]) + noise
+        found_planet_sine[i] = sine
+    for i in diff_index: #replace nan when planet not found w zeros
+        found_planet_sine[i] = [0] * len(found_planet_sine[1])  
+    #adding up individual planet rv curves
+    star_RV = np.add(found_planet_sine[0], found_planet_sine[1])
+    if len(found_planet_sine) > 2:
+        for i in range(2, len(found_planet_sine)):           
+            star_RV = np.add(star_RV, found_planet_sine[i])
+  
+    #plots individual planets true v found curve over its phase by subtracting other planets
+    planets = np.arange(0, len(true_periods))   
+    found_planets = np.arange(0, len(found_planet_sine))
+    fit_amp = []
+    for i in found_planets:
+        true = rv_sum[star_id]
+        found = star_RV
+        for j in planets:
+            if i != j:
+                true = true - data[ID][j] 
+        for j in found_planets:
+            if i != j:
+                found = found - found_planet_sine[j]                
+        amp = np.arange(0,5,0.01)
+        chi_squared = []
+        for j in range(0, len(amp)):
+            rv_element = amp[j] * np.sin((2*np.pi*time)/found_periods[i] - phase_list[star_id][i])
+            chi_squared_stat = sum(((rv_element - found)**2)/1**2)
+            chi_squared.append(chi_squared_stat)
+        #find the semiaplitude with min chisquared
+        min_y = min(chi_squared)
+        min_x = amp[chi_squared.index(min_y)]      
+        fit_amp.append(min_x)
+   
+    write_data = [[]for i in range(len(found_periods))] 
+    write = []
+    for i in range(0,len(true_periods)):
+        write.append(ID)
+        write.append(str(i + 1))
+        write.append(str(truncate(true_periods[i],1)))
+        write.append(str(truncate(found_periods[i],1)))
+        write.append(str(truncate(true_amp[i],1)))
+        write.append(str(truncate(found_amp[i],1)))
+        write.append(str(truncate(fit_amp[i],1)))
+        write_data[i] = write
+        write = []
+    return write_data
+
+def run_all():
+    title = ['Star', 'Planet', 'True_Period', 'Found_Period', 'True_Amp', 'Found_Amp', 'Fitted_Amp', 'Amp_CI']     
+    file = open('RV_data.txt','w')    
+    for i in title:
+        file.write(i)
+        file.write('  ')
+    file.write('\n')
+    for i in range(0,5):
+        write_data = fft_noplots(i+1,4000,0.25)
+        for j in range(0,len(write_data)):
+            for k in range(0,len(write_data[0])):
+                file.write(write_data[j][k])
+                file.write('       ')
+            file.write('\n')
     
 #generating sine waves
 f = open("ajaaf477t2_mrt.txt", 'r')
