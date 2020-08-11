@@ -193,6 +193,7 @@ def fft(star_id, N, T): #star id, sample size, sample space
     #plots individual planets true v found curve over its phase by subtracting other planets
     planets = np.arange(0, len(true_periods))   
     found_planets = np.arange(0, len(found_planet_sine))
+    fit_amp = []
     for i in found_planets:
         true = rv_sum[star_id]
         found = star_RV
@@ -202,47 +203,35 @@ def fft(star_id, N, T): #star id, sample size, sample space
         for j in found_planets:
             if i != j:
                 found = found - found_planet_sine[j]
+                
+        amp = np.arange(0,5,0.01)
+        chi_squared = []
+        for j in range(0, len(amp)):
+            rv_element = amp[j] * np.sin((2*np.pi*time)/found_periods[i] - phase_list[star_id][i])
+            chi_squared_stat = sum(((rv_element - found)**2)/1**2)
+            chi_squared.append(chi_squared_stat)
+        #find the semiaplitude with min chisquared
+        min_y = min(chi_squared)
+        min_x = amp[chi_squared.index(min_y)]      
+        fit_amp.append(min_x)
+        
         plt.plot(time % found_periods[i], found, '.', label = "Found RV")        
         plt.plot(time % true_periods[i], true, '.', label = "True RV")
         plt.plot(time % true_periods[i], true_amp[i] * np.sin(((time % true_periods[i])*2*np.pi)/true_periods[i] - phase_list[star_id][i]), 'g.', label = "True")
         plt.plot(time % found_periods[i], found_amp[i] * np.sin(((time % found_periods[i])*2*np.pi)/found_periods[i] - phase_list[star_id][i]), 'y.', label = "Found")
+        plt.plot(time % found_periods[i], min_x * np.sin((2*np.pi*(time % found_periods[i]))/found_periods[i] - phase_list[star_id][i]), 'k.', label = "Amp Fitted")
         plt.xlim(0,true_periods[i])
         plt.legend()
         plt.xlabel("Time (days)")
         plt.ylabel("Radial Velocity (m/s)")
         plt.title("Detected Transits - Star {} Planet {}".format(star_id, i+1))
-        plt.show()
-    
-    #writes in found summed RV
-    f = open("found_rv.txt", "w")   
-    f.write(str(found_periods[1]))
-    f.write("\n")
-    f.write(str(phase_list[star_id][1]))
-    f.write("\n")
-    for i in range(0, len(time)):
-        f.write(str(star_RV[i]))
-        f.write("\n")
-    #writes in RV of each transit
-    for i in loc: 
-        f = open("found_rv_planet{}.txt".format(i + 1), "w")   
-        f.write(str(found_periods[1]))
-        f.write("\n")
-        f.write(str(phase_list[star_id][1]))
-        f.write("\n")
-        for j in range(0, len(found_planet_sine[i])):
-            f.write(str(found_planet_sine[i][j]))
-            f.write("\n")
+        plt.show()  
 
-'''
-    f = open("found_rv_minus_planet1.txt", "w")   
-    f.write(str(found_periods[1]))
-    f.write("\n")
-    f.write(str(phase_list[star_id][1]))
-    f.write("\n")
-    for i in range(0, len(time)):
-        f.write(str(minus_planet1[i]))
-        f.write("\n")
-'''       
+    print("True Amplitudes: {}".format(list(round(num, 2) for num in true_amp)))
+    print("Found Amplitudes: {}".format(list(round(num, 2) for num in found_amp)))
+    print("Fitted Amplitudes: {}".format(list(round(num, 2) for num in fit_amp)))
+    
+    
 #generating sine waves
 f = open("ajaaf477t2_mrt.txt", 'r')
 metadata(f)
