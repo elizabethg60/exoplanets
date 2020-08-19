@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import scipy.fftpack
 from scipy.signal import find_peaks
@@ -230,8 +231,8 @@ def fft(star_id, N, T): #star id, sample size, sample space
     print("True Amplitudes: {}".format(list(round(num, 2) for num in true_amp)))
     print("Found Amplitudes: {}".format(list(round(num, 2) for num in found_amp)))
     print("Fitted Amplitudes: {}".format(list(round(num, 2) for num in fit_amp)))
- 
- def fft_noplots(star_id, N, T): #star id, sample size, sample space
+
+def fft_noplots(star_id, N, T): #star id, sample size, sample space
     ID = str(star_id)
     time = np.linspace(0.0, N*T, N)    
     data_table = read_table("ajaaf477t2_mrt.txt") 
@@ -336,40 +337,42 @@ def fft(star_id, N, T): #star id, sample size, sample space
             rv_element = amp[j] * np.sin((2*np.pi*time)/found_periods[i] - phase_list[star_id][i])
             chi_squared_stat = sum(((rv_element - found)**2)/1**2)
             chi_squared.append(chi_squared_stat)
-        #find the semiaplitude with min chisquared
         min_y = min(chi_squared)
         min_x = amp[chi_squared.index(min_y)]      
-        fit_amp.append(min_x)
-   
+        fit_amp.append(min_x)        
+    
+    #finding mass
+    found_mass = []
+    for i in range(0,len(found_periods)):
+        planet_mass = ((4*np.pi**2*((float(data_table[ID][i][-9])/float(star_radii[star_id][i])))**3)/G*found_periods[i]**2) - star_masses[star_id][i]
+        found_mass.append(planet_mass)
+    print(found_mass)
+    
     write_data = [[]for i in range(len(found_periods))] 
     write = []
     for i in range(0,len(true_periods)):
         write.append(ID)
-        write.append(str(i + 1))
-        write.append(str(truncate(true_periods[i],1)))
-        write.append(str(truncate(found_periods[i],1)))
-        write.append(str(truncate(true_amp[i],1)))
-        write.append(str(truncate(found_amp[i],1)))
-        write.append(str(truncate(fit_amp[i],1)))
+        write.append(i + 1)
+        write.append(round(true_periods[i],2))
+        write.append(round(found_periods[i],2))
+        write.append(round(true_amp[i],2))
+        write.append(round(found_amp[i],2))
+        write.append(round(fit_amp[i],2))
+        #write.append(round(float(data_table[ID][i][-7]),2))
+        #write.append(round(found_mass[i],2))
         write_data[i] = write
         write = []
     return write_data
 
 def run_all():
-    title = ['Star', 'Planet', 'True_Period', 'Found_Period', 'True_Amp', 'Found_Amp', 'Fitted_Amp', 'Amp_CI']     
-    file = open('RV_data.txt','w')    
-    for i in title:
-        file.write(i)
-        file.write('  ')
-    file.write('\n')
-    for i in range(0,5):
-        write_data = fft_noplots(i+1,4000,0.25)
-        for j in range(0,len(write_data)):
-            for k in range(0,len(write_data[0])):
-                file.write(write_data[j][k])
-                file.write('       ')
-            file.write('\n')
-    
+    title = ['Star', 'Planet', 'True_Period', 'Found_Period', 'True_Amp', 'Found_Amp', 'Fitted_Amp']     
+    df = pd.DataFrame(fft_noplots(1,4000,0.25), columns = title)
+    for i in range(1,5):
+        df2 = pd.DataFrame(fft_noplots(i+1,4000,0.25), columns = title)
+        df = df.append(df2)
+    df.to_pickle("data.pkl")
+
+      
 #generating sine waves
 f = open("ajaaf477t2_mrt.txt", 'r')
 metadata(f)
@@ -384,8 +387,12 @@ for elem in range(5391):
 
 #find individual planet RV sine wave
 phase_list = [[]for i in range(953)]
+star_masses = [[]for i in range(953)]
+star_radii = [[]for i in range(953)]
 for i in range(1,953):
     x = str(i)
+    mass = []
+    radius = []
     for j in range(0,len(data[x])):
         e = float(data[x][j][-4])
         period = float(data[x][j][8])*86400
@@ -397,10 +404,13 @@ for i in range(1,953):
         #finding star mass & radius
         star_mass = -22.296508 + (1.5446387*10**-2)*Teff - (3.488452*10**-6)*(Teff**2) + (2.64961*10**-10)*(Teff**3)
         star_radius = -16.883175 + 1.1835396*10**-2*Teff - (2.70872*10**-6)*(Teff**2) + 2.105028*10**-10*(Teff**3)
+
         
         p_mass = p_mass * earth_mass
         star_mass = star_mass * solar_mass
         star_radius = star_radius * solar_radius
+        mass.append(star_mass)
+        radius.append(star_radius)        
         
         #finding semi-major axis both ways
         a_r = float(data[x][j][-9])
@@ -417,7 +427,8 @@ for i in range(1,953):
         
         data[x][j] = RV
         phase_list[i].append(phase)
-
+    star_masses[i] = mass
+    star_radii[i] = radius
 #add individual planet sine wave to get total star RV
 rv_sum = [[]for i in range(953)] #lst[0] will be blank therefore index = star id 
 for i in range(1, 953):
