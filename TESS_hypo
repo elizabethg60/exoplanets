@@ -1,0 +1,76 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+
+def metadata(filename):
+    for i in range(36):
+        f.readline()
+
+df = pd.read_pickle("data.pkl")
+
+#appends error and detection columns to df
+error = []
+test = []
+for i in range(0,len(df)):
+    true = float(df.iloc[i]['True_Amp'])
+    found = float(df.iloc[i]['Found_Amp'])
+    err = (true-found)/true
+    error.append(err)  
+    if err > 0.8:
+        test.append(0) #not detected
+    if err < 0.2:
+        test.append(1) #detected w good amp
+    if err > 0.2 and err < 0.8: 
+        test.append(-1) #detected w bad amp
+plt.hist(error,100)
+plt.title("Found Amplitude Error")
+plt.xlabel("Error")
+plt.ylabel("Frequency")
+plt.show()
+df['error'] = error
+df['detection'] = test
+print("{} Total Planets".format(len(df)))
+print("Good Detection: {}, Poor Detection: {}, No Detection: {}".format(test.count(1), test.count(-1), test.count(0)))
+print('\n')
+
+#determining if neighbor planets are detected for those that wrongly found
+one_undetected_neighbor = []
+two_undetected_neighbor = []
+star_number = []
+for i in range(0,len(df)-1):
+    if df.iloc[i]['detection'] == -1:
+        if df.iloc[i - 1]['detection'] == 0 and df.iloc[i + 1]['detection'] == 0:
+            two_undetected_neighbor.append(1)
+            star_number.append(int(df.iloc[i]['Star']))
+        if df.iloc[i - 1]['detection'] == 0 and df.iloc[i + 1]['detection'] != 0:
+            one_undetected_neighbor.append(1)
+            star_number.append(int(df.iloc[i]['Star']))
+        if df.iloc[i - 1]['detection'] != 0 and df.iloc[i + 1]['detection'] == 0:
+            one_undetected_neighbor.append(1)
+            star_number.append(int(df.iloc[i]['Star']))
+print("{} out of {} found have 1 undetected neighbor".format(len(one_undetected_neighbor), test.count(-1)))
+print("{} out of {} found have 2 undetected neighbor".format(len(two_undetected_neighbor), test.count(-1)))               
+set_star = set(sorted(star_number))
+
+f = open("ajaaf477t2_mrt.txt", 'r')
+metadata(f)
+data = {}
+for elem in range(5391):
+    line = f.readline().strip().split()
+    if line[0] not in data:
+        data[str(line[0])] = []
+    data[str(line[0])].append(line[0:])  
+
+#compare system density for all planets found v some not     
+total_planets = []
+total_planets_wrong = []
+for i in set_star:
+    total_planets_wrong.append(len(data[str(i)]))
+for i in range(1,101):
+    total_planets.append(len(data[str(i)]))
+plt.hist(total_planets,100, label = "Density for Complete Systems")
+plt.hist(total_planets_wrong,100, label = "Density for Incomplete Systems > 0.2")
+plt.title("Solar System Density")
+plt.xlabel("Number of Planets")
+plt.ylabel("Frequency")
+plt.legend()
+plt.show()
