@@ -1,15 +1,46 @@
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
+from scipy import stats
 
 def metadata(filename):
     for i in range(36):
         f.readline()
+        
+def cdf(data, data2):
+    data_size=len(data)
+    data_size2 = len(data2)   
+
+    # Set bins edges
+    data_set=sorted(set(data))
+    bins=np.append(data_set, data_set[-1]+1)
+    data_set2=sorted(set(data2))
+    bins2=np.append(data_set2, data_set2[-1]+1)
+    
+    # Use the histogram function to bin the data
+    counts, bin_edges = np.histogram(data, bins=bins, density=False)
+    counts=counts.astype(float)/data_size
+    counts2, bin_edges2 = np.histogram(data2, bins=bins2, density=False)
+    counts2=counts2.astype(float)/data_size2
+    # Find the cdf
+    cdf = np.cumsum(counts)
+    cdf2 = np.cumsum(counts2)
+    
+    # Plot the cdf
+    plt.plot(bin_edges[0:-1], cdf,linestyle='--', color='b', label = "Heavy")   
+    plt.plot(bin_edges2[0:-1], cdf2,linestyle='--', color='r', label = "Light")
+    plt.ylim((0,1))
+    plt.ylabel("CDF")
+    plt.grid(True)
+    plt.legend()
+    plt.show()
 
 df = pd.read_pickle("data.pkl")
 
 #appends error and detection columns to df
 error = []
 test = []
+star_poor = []
 for i in range(0,len(df)):
     true = float(df.iloc[i]['True_Amp'])
     found = float(df.iloc[i]['Found_Amp'])
@@ -21,6 +52,7 @@ for i in range(0,len(df)):
         test.append(1) #detected w good amp
     if err > 0.2 and err < 0.8: 
         test.append(-1) #detected w bad amp
+        star_poor.append(int(df.iloc[i]['Star']))
 plt.hist(error,100)
 plt.title("Found Amplitude Error")
 plt.xlabel("Error")
@@ -30,6 +62,24 @@ df['error'] = error
 df['detection'] = test
 print("{} Total Planets".format(len(df)))
 print("Good Detection: {}, Poor Detection: {}, No Detection: {}".format(test.count(1), test.count(-1), test.count(0)))
+
+#error histogram for systems with heavy vs light density
+df_heavy = df[df["Total_Planets"] > str(5)]
+plt.hist(df_heavy['error'],100)
+plt.title("Found Amplitude Error - Density > 5")
+plt.xlabel("Error")
+plt.ylabel("Frequency")
+plt.show()
+df_light = df[df["Total_Planets"] < str(3)]
+plt.hist(df_light['error'],100)
+plt.title("Found Amplitude Error - Density < 3")
+plt.xlabel("Error")
+plt.ylabel("Frequency")
+plt.show()
+
+#cdf for heavy v low + ks test
+cdf(df_heavy['error'], df_light['error'])
+print(stats.ks_2samp(df_heavy['error'], df_light['error']))
 print('\n')
 
 #determining if neighbor planets are detected for those that wrongly found
@@ -74,3 +124,9 @@ plt.xlabel("Number of Planets")
 plt.ylabel("Frequency")
 plt.legend()
 plt.show()
+
+#dictionary star_id: # of planets with poor detections
+poor_count = {}
+for i in star_poor:
+    poor_count[str(i)] = star_poor.count(i)
+print(poor_count)
