@@ -60,17 +60,17 @@ plt.ylabel("Frequency")
 plt.show()
 df['error'] = error
 df['detection'] = test
-print("{} Total Planets".format(len(df)))
-print("Good Detection: {}, Poor Detection: {}, No Detection: {}".format(test.count(1), test.count(-1), test.count(0)))
 
 #error histogram for systems with heavy vs light density
 df_heavy = df[df["Total_Planets"] > str(5)]
+df_heavy = df_heavy[df_heavy['detection'] == -1]
 plt.hist(df_heavy['error'],100)
 plt.title("Found Amplitude Error - Density > 5")
 plt.xlabel("Error")
 plt.ylabel("Frequency")
 plt.show()
 df_light = df[df["Total_Planets"] < str(3)]
+df_light = df_light[df_light['detection'] == -1]
 plt.hist(df_light['error'],100)
 plt.title("Found Amplitude Error - Density < 3")
 plt.xlabel("Error")
@@ -86,8 +86,10 @@ print('\n')
 one_undetected_neighbor = []
 two_undetected_neighbor = []
 star_number = []
+poor_id = []
 for i in range(0,len(df)-1):
     if df.iloc[i]['detection'] == -1:
+        poor_id.append(df.iloc[i]['Star'])
         if df.iloc[i - 1]['detection'] == 0 and df.iloc[i + 1]['detection'] == 0:
             two_undetected_neighbor.append(1)
             star_number.append(int(df.iloc[i]['Star']))
@@ -99,7 +101,7 @@ for i in range(0,len(df)-1):
             star_number.append(int(df.iloc[i]['Star']))
 print("{} out of {} found have 1 undetected neighbor".format(len(one_undetected_neighbor), test.count(-1)))
 print("{} out of {} found have 2 undetected neighbor".format(len(two_undetected_neighbor), test.count(-1)))               
-set_star = set(sorted(star_number))
+print('\n')
 
 f = open("ajaaf477t2_mrt.txt", 'r')
 metadata(f)
@@ -110,23 +112,41 @@ for elem in range(5391):
         data[str(line[0])] = []
     data[str(line[0])].append(line[0:])  
 
-#compare system density for all planets found v some not     
+#dictionary star_id: [total systems w that density, good, poor, no detection]
 total_planets = []
-total_planets_wrong = []
-for i in set_star:
-    total_planets_wrong.append(len(data[str(i)]))
 for i in range(1,101):
     total_planets.append(len(data[str(i)]))
-plt.hist(total_planets,100, label = "Density for Complete Systems")
-plt.hist(total_planets_wrong,100, label = "Density for Incomplete Systems > 0.2")
-plt.title("Solar System Density")
-plt.xlabel("Number of Planets")
-plt.ylabel("Frequency")
-plt.legend()
-plt.show()
+poor_data = {}
+for i in set(total_planets):
+    data = []
+    total = df[df["Total_Planets"] == str(i)]
+    data.append(len(total))
+    data.append(len(total[total['detection'] == 1]))
+    data.append(len(total[total['detection'] == -1]))
+    data.append(len(total[total['detection'] == 0]))
+    poor_data[i] = data
+print("{} Total Planets".format(len(df)))
+print("Good Detection: {}, Poor Detection: {}, No Detection: {}".format(test.count(1), test.count(-1), test.count(0)))
+print(poor_data)
 
-#dictionary star_id: # of planets with poor detections
-poor_count = {}
-for i in star_poor:
-    poor_count[str(i)] = star_poor.count(i)
-print(poor_count)
+#period ratio between poor detection and good detections from same system
+df_ratio = pd.DataFrame(columns = ['Star', 'Poor_Planet', 'Good_Planet', 'Poor_Period', 'Good_Period', 'detection', 'Ratio']) 
+for i in set(poor_id):
+    df_total_poor = df[df['Star'] == i]
+    df_actual_poor = df_total_poor[df_total_poor['detection'] == -1]
+    df_nonpoor = df_total_poor[df_total_poor['detection'] != -1]
+    poor_planet = list(df_actual_poor['Planet'])
+    good_planet = list(df_nonpoor['Planet'])
+    poor_period = list(df_actual_poor['True_Period'])
+    good_period = list(df_nonpoor['True_Period'])
+    good_detection = list(df_nonpoor['detection'])
+    for j in range(0, len(poor_period)):
+        for k in range(0, len(good_period)):
+            num = max(poor_period[j], good_period[k])
+            den = min(poor_period[j], good_period[k])
+            ratio = num/den
+            df_ratio = df_ratio.append({'Star' : int(i), 'Poor_Planet' : poor_planet[j], 'Good_Planet' : good_planet[k], 
+                                        'Poor_Period' : poor_period[j], 'Good_Period' : good_period[k], 'detection' : good_detection[k], 'Ratio' : ratio}, 
+                                        ignore_index = True)
+pd.set_option("display.max_rows", None, "display.max_columns", None)
+print(df_ratio.to_string(index=False))
