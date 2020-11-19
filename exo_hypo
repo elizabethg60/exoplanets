@@ -30,33 +30,38 @@ pd.set_option("display.max_rows", None, "display.max_columns", None)
 
 #number found out of total
 detected = df_true.loc[df_true['Exo_Detection'] == 1.0]
+undetected = df_true.loc[df_true['Exo_Detection'] != 1.0]
 print("{} found out of {}".format(len(detected), len(df_true)))
 
-#not detected
-undetected = df_true.loc[df_true['Exo_Detection'] != 1.0]
-
-
 #print(detected['True_Amp'], undetected['True_Amp'])
-
 
 #determining if neighbor planets are detected for those that wrongly found
 one_undetected_neighbor = []
 two_undetected_neighbor = []
 two_detected_neighbor = []
-for i in range(0,len(df_true)):
-    if df_true.iloc[i]['Exo_Detection'] == 1.0:
-        if df_true.iloc[i - 1]['Exo_Detection'] != 1 and df_true.iloc[i + 1]['Exo_Detection'] != 1:
-            two_undetected_neighbor.append(1)
-        if df_true.iloc[i - 1]['Exo_Detection'] == 1 and df_true.iloc[i + 1]['Exo_Detection'] == 1:
-            two_detected_neighbor.append(1)
-        if df_true.iloc[i - 1]['Exo_Detection'] != 1 and df_true.iloc[i + 1]['Exo_Detection'] == 1:
-            one_undetected_neighbor.append(1)
-        if df_true.iloc[i - 1]['Exo_Detection'] == 1 and df_true.iloc[i + 1]['Exo_Detection'] != 1:
-            one_undetected_neighbor.append(1)           
+for i in range(0, 21):
+    x = df_true[df_true['Star'] == i]
+    for j in range(0, len(x)):
+        if x.iloc[j]['Exo_Detection'] != 1.0:
+            if j == 0:
+                if df_true.iloc[j + 1]['Exo_Detection'] != 1:
+                    one_undetected_neighbor.append(1) 
+            if j == (len(x)-1):
+                if df_true.iloc[j - 1]['Exo_Detection'] != 1:
+                    one_undetected_neighbor.append(1)
+            else:
+                if df_true.iloc[j - 1]['Exo_Detection'] != 1 and df_true.iloc[j + 1]['Exo_Detection'] != 1:
+                    two_undetected_neighbor.append(1)
+                if df_true.iloc[j - 1]['Exo_Detection'] == 1 and df_true.iloc[j + 1]['Exo_Detection'] == 1:
+                    two_detected_neighbor.append(1)
+                if df_true.iloc[j - 1]['Exo_Detection'] != 1 and df_true.iloc[j + 1]['Exo_Detection'] == 1:
+                    one_undetected_neighbor.append(1)
+                if df_true.iloc[j - 1]['Exo_Detection'] == 1 and df_true.iloc[j + 1]['Exo_Detection'] != 1:
+                    one_undetected_neighbor.append(1) 
 print("{} out of {} found have 1 undetected/detected neighbor".format(len(one_undetected_neighbor), len(undetected)))
 print("{} out of {} found have 2 undetected neighbors".format(len(two_undetected_neighbor), len(undetected)))
-print("{} out of {} found have 2 detected neighbors".format(len(two_detected_neighbor), len(undetected)))
-
+print("{} out of {} found have 2 detected neighbors".format(len(two_detected_neighbor), len(undetected)))            
+ 
 
 #found amplitude error between true and found amp
 error_amp = []
@@ -86,8 +91,12 @@ plt.ylabel("Frequency")
 plt.show()
 df_true['error_period'] = error_period
 
+detected = df_true.loc[df_true['Exo_Detection'] == 1.0]
+undetected = df_true.loc[df_true['Exo_Detection'] != 1.0]
+print("Median Amplitude: {}".format(np.median(detected['error_amp'])))
+print("Median Period: {}".format(np.median(detected['error_period'])))
+
 #plot period vs amp and color code if found or not
-#df_true.plot(x='True_Period', y='True_Amp', style='o')
 detected = df_true.loc[df_true['Exo_Detection'] == 1.0]
 plt.scatter(detected['True_Period'], detected['True_Amp'], color='k', label = 'Detected')
 plt.scatter(undetected['True_Period'], undetected['True_Amp'], color='g', label = 'Undetected')
@@ -96,3 +105,5 @@ plt.xlabel("Period")
 plt.ylabel("Amplitude")
 plt.legend()
 plt.show() 
+
+df_true.to_pickle("complete_table.pkl") 
